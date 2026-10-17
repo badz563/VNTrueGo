@@ -31,7 +31,7 @@ API ghi dữ liệu dashboard chỉ hoạt động trong `NODE_ENV=development`.
 - 24 địa điểm Hà Nội; tên và vị trí gần đúng. Ảnh là **minh họa tạo bởi AI**, không phải ảnh thực địa được xác minh.
 - Giờ tham quan, giá vé, mức đông, thời lượng và trạng thái ban đầu là dữ liệu **demo/chưa xác minh**. API đánh dấu nguồn và thời gian cập nhật. Trạng thái không có cập nhật gần đây hiện “Chưa có thông tin mới”.
 - Dashboard development ghi cập nhật, lịch sử, thông báo và revision vào SQLite cục bộ. API địa điểm trả `Cache-Control: no-store`. Trên Vercel, dashboard chỉ đọc vì chưa có xác thực và phân quyền.
-- Bản đồ dùng OpenStreetMap/Leaflet với tile PNG chuẩn. Đường nối là minh họa; thời gian di chuyển tính từ khoảng cách địa lý, hệ số đường đi và tốc độ ước tính, **không phải dữ liệu định tuyến thực tế**.
+- Bản đồ dùng OpenStreetMap/Leaflet với tile PNG chuẩn. Nếu mạng chặn máy chủ tile, ứng dụng báo lỗi và cung cấp liên kết mở vị trí trên Google Maps. Đường nối là minh họa; thời gian di chuyển tính từ khoảng cách địa lý, hệ số đường đi và tốc độ ước tính, **không phải dữ liệu định tuyến thực tế**.
 - Font Be Vietnam Pro và Noto Serif được đóng gói trong ứng dụng, có bộ ký tự tiếng Việt. Sở thích trong mục Cá nhân lưu tại trình duyệt để gợi ý điểm đến và chọn sẵn trên form tạo lịch trình.
 - Trạng thái điểm đến và mức đông quá 24 giờ được hiển thị là “Chưa có thông tin mới”; đây là ngưỡng trình bày của demo, không phải cam kết độ chính xác của nguồn.
 - Không có push notification khi đóng trình duyệt. Lịch trình và thông báo lưu trong localStorage của từng thiết bị; server không biết các lịch trình này.

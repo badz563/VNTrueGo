@@ -6,18 +6,23 @@ export default function MapView({ points, height = 300 }: { points: Destination[
   const holder = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import("leaflet").Map | null>(null);
   const [full,setFull] = useState(false);
+  const [tileFailed,setTileFailed] = useState(false);
   useEffect(() => {
     if (!holder.current || !points.length) return;
     let cancelled = false;
     let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+    setTileFailed(false);
     import("leaflet").then(L => {
       if (cancelled || !holder.current) return;
       const map = L.map(holder.current,{scrollWheelZoom:false,zoomControl:true});
       mapRef.current = map;
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
         attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom:19
-      }).addTo(map);
+      });
+      tiles.on("tileerror", () => { if (!cancelled) setTileFailed(true); });
+      tiles.on("tileload", () => { if (!cancelled) setTileFailed(false); });
+      tiles.addTo(map);
       const coords = points.map(p => [p.lat,p.lng] as [number,number]);
       const icon = L.divIcon({className:"map-pin",html:'<span></span>',iconSize:[20,20]});
       points.forEach(p => L.marker([p.lat,p.lng],{icon}).addTo(map).bindPopup(p.name));
@@ -32,6 +37,7 @@ export default function MapView({ points, height = 300 }: { points: Destination[
   return <div className={full ? "map-wrap map-full" : "map-wrap"} style={{height:full ? undefined : height}}>
     <div ref={holder} className="map-canvas" aria-label="Bản đồ các điểm tham quan" />
     <button className="map-expand icon-btn" onClick={() => setFull(!full)} aria-label={full ? "Thu nhỏ bản đồ" : "Xem bản đồ toàn màn hình"}>{full ? <X size={20}/> : <Expand size={20}/>}</button>
+    {tileFailed && <div className="map-fallback" role="status">Không tải được nền bản đồ trên mạng này. <a href={`https://www.google.com/maps/search/?api=1&query=${points[0].lat},${points[0].lng}`} target="_blank" rel="noreferrer">Mở vị trí trên Google Maps</a>.</div>}
     {points.length > 1 && <div className="map-note">Đường nối minh họa · thời gian di chuyển ước tính</div>}
   </div>;
 }
