@@ -1,50 +1,72 @@
 import "server-only";
-import { DatabaseSync } from "node:sqlite";
+import { createClient, type Client, type InStatement } from "@libsql/client";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import seedRows from "../../data/seed.json";
 import type { Crowd, Destination, Status } from "./types";
 
 type Row = Record<string, unknown>;
-let connection: DatabaseSync | null = null;
 const root = process.cwd();
+let connection: Promise<Client> | null = null;
 
-export function db(): DatabaseSync {
-  if (connection) return connection;
-  const dataDir = path.join(root, "data");
-  mkdirSync(dataDir, { recursive: true });
-  const file = process.env.DATABASE_PATH || path.join(dataDir, "truego.sqlite");
-  const sql = new DatabaseSync(file);
-  sql.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
-  sql.exec(readFileSync(path.join(root, "migrations", "001_init.sql"), "utf8"));
-  const count = (sql.prepare("SELECT COUNT(*) AS n FROM destinations").get() as { n: number }).n;
-  if (!count) seed(sql);
-  connection = sql;
-  return sql;
+export function databaseMode(): "local" | "remote" | "seed" {
+  if (Boolean(process.env.TURSO_DATABASE_URL) !== Boolean(process.env.TURSO_AUTH_TOKEN)) {
+    throw new Error("TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be configured together.");
+  }
+  if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) return "remote";
+  return process.env.NODE_ENV === "development" && !process.env.VERCEL ? "local" : "seed";
 }
 
-function seed(sql: DatabaseSync) {
-  const rows = JSON.parse(readFileSync(path.join(root, "data", "seed.json"), "utf8")) as Array<Record<string, unknown>>;
+function seedStatements(): InStatement[] {
   const now = new Date().toISOString();
-  const insert = sql.prepare(`INSERT INTO destinations
-    (id,slug,name,name_en,category,description,description_en,lat,lng,address,image,tags_json,duration,price,opening_json,closed_days_json,status,status_rev,status_updated_at,status_source,crowd,crowd_updated_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
-  sql.exec("BEGIN");
-  try {
-    for (const row of rows) {
-      insert.run(
-        row.id as string, row.slug as string, row.name as string, row.nameEn as string,
-        row.category as string,
-        `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
-        `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
-        row.lat as number, row.lng as number, row.address as string, row.image as string,
-        JSON.stringify(row.tags), row.duration as number, row.price as number,
-        JSON.stringify({ open: "08:00", close: "17:00" }), JSON.stringify([]),
-        "unknown", 1, null, "demo", "unknown", null, now
-      );
-    }
-    sql.prepare("INSERT OR IGNORE INTO partner_organizations (id,name) VALUES (?,?)").run("demo","TrueGo Demo Partner");
-    sql.exec("COMMIT");
-  } catch (error) { sql.exec("ROLLBACK"); throw error; }
+  const statements: InStatement[] = seedRows.map(row => ({
+    sql: `INSERT INTO destinations
+      (id,slug,name,name_en,category,description,description_en,lat,lng,address,image,tags_json,duration,price,opening_json,closed_days_json,status,status_rev,status_updated_at,status_source,crowd,crowd_updated_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    args: [row.id, row.slug, row.name, row.nameEn, row.category,
+      `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
+      `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
+      row.lat, row.lng, row.address, row.image, JSON.stringify(row.tags), row.duration, row.price,
+      JSON.stringify({ open: "08:00", close: "17:00" }), JSON.stringify([]),
+      "unknown", 1, null, "demo", "unknown", null, now]
+  }));
+  statements.push({ sql: "INSERT OR IGNORE INTO partner_organizations (id,name) VALUES (?,?)", args: ["demo", "TrueGo Demo Partner"] });
+  return statements;
+}
+
+async function connect(): Promise<Client> {
+  if (databaseMode() === "remote") {
+    // Remote schema and seed are provisioned explicitly; requests never migrate production data.
+    return createClient({ url: process.env.TURSO_DATABASE_URL!, authToken: process.env.TURSO_AUTH_TOKEN! });
+  }
+  const file = process.env.DATABASE_PATH || path.join(root, "data", "truego.sqlite");
+  mkdirSync(path.dirname(file), { recursive: true });
+  const client = createClient({ url: `file:${file.replaceAll("\\", "/")}` });
+  await client.execute("PRAGMA foreign_keys = ON");
+  await client.executeMultiple(readFileSync(path.join(root, "migrations", "001_init.sql"), "utf8"));
+  const count = await client.execute("SELECT COUNT(*) AS n FROM destinations");
+  if (Number(count.rows[0].n) === 0) await client.batch(seedStatements(), "write");
+  return client;
+}
+
+export async function db(): Promise<Client | null> {
+  if (databaseMode() === "seed") return null;
+  if (!connection) connection = connect().catch(error => { connection = null; throw error; });
+  return connection;
+}
+
+function seedDestination(row: (typeof seedRows)[number]): Destination {
+  return {
+    id: row.id, slug: row.slug, name: row.name, nameEn: row.nameEn,
+    category: row.category,
+    description: `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
+    descriptionEn: `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
+    lat: row.lat, lng: row.lng, address: row.address, image: row.image,
+    tags: row.tags, duration: row.duration, price: row.price,
+    opening: { open: "08:00", close: "17:00" }, closedDays: [],
+    status: "unknown", statusRev: 1, statusUpdatedAt: null, statusSource: "demo",
+    crowd: "unknown", crowdUpdatedAt: null, updatedAt: "2026-10-17"
+  };
 }
 
 export function mapDestination(row: Row): Destination {
@@ -64,26 +86,49 @@ export function mapDestination(row: Row): Destination {
     updatedAt: String(row.updated_at)
   };
 }
-export function allDestinations(): Destination[] {
-  return (db().prepare("SELECT * FROM destinations ORDER BY id").all() as Row[]).map(mapDestination);
+
+export async function allDestinations(): Promise<Destination[]> {
+  const client = await db();
+  if (!client) return seedRows.map(seedDestination);
+  const result = await client.execute("SELECT * FROM destinations ORDER BY id");
+  return result.rows.map(row => mapDestination(row as Row));
 }
-export function destinationBySlug(slug: string): Destination | null {
-  const row = db().prepare("SELECT * FROM destinations WHERE slug = ?").get(slug) as Row | undefined;
+
+export async function destinationBySlug(slug: string): Promise<Destination | null> {
+  const client = await db();
+  if (!client) {
+    const row = seedRows.find(item => item.slug === slug);
+    return row ? { ...seedDestination(row), announcements: [], reviews: [] } : null;
+  }
+  const result = await client.execute({ sql: "SELECT * FROM destinations WHERE slug = ?", args: [slug] });
+  const row = result.rows[0];
   if (!row) return null;
-  const destination = mapDestination(row);
-  destination.announcements = (db().prepare("SELECT id,message,created_at AS createdAt,source FROM destination_announcements WHERE destination_id = ? ORDER BY id DESC LIMIT 10").all(destination.id) as Destination["announcements"]) || [];
-  destination.reviews = (db().prepare("SELECT id,author,body,verification FROM reviews WHERE destination_id = ? ORDER BY id DESC LIMIT 10").all(destination.id) as Destination["reviews"]) || [];
+  const destination = mapDestination(row as Row);
+  const [announcements, reviews] = await Promise.all([
+    client.execute({ sql: "SELECT id,message,created_at AS createdAt,source FROM destination_announcements WHERE destination_id = ? ORDER BY id DESC LIMIT 10", args: [destination.id] }),
+    client.execute({ sql: "SELECT id,author,body,verification FROM reviews WHERE destination_id = ? ORDER BY id DESC LIMIT 10", args: [destination.id] })
+  ]);
+  destination.announcements = announcements.rows as unknown as Destination["announcements"];
+  destination.reviews = reviews.rows as unknown as Destination["reviews"];
   return destination;
 }
-export function resetDemo() {
-  const sql = db();
-  sql.exec("BEGIN");
-  try {
-    for (const table of ["destination_status_history","destination_announcements","crowd_forecasts","feedback","reviews","destinations"]) sql.exec(`DELETE FROM ${table}`);
-    sql.exec("COMMIT");
-  } catch (error) { sql.exec("ROLLBACK"); throw error; }
-  seed(sql);
+
+export async function destinationHistory(id: string) {
+  const client = await db();
+  if (!client) return [];
+  const result = await client.execute({ sql: "SELECT * FROM destination_status_history WHERE destination_id=? ORDER BY id DESC LIMIT 30", args: [id] });
+  return result.rows;
 }
+
+export async function resetDemo() {
+  if (!demoWritesAllowed()) throw new Error("Demo reset is disabled outside local development.");
+  const client = await db();
+  if (!client) throw new Error("Local database unavailable.");
+  const deletes = ["destination_status_history", "destination_announcements", "crowd_forecasts", "feedback", "reviews", "destinations"]
+    .map(table => `DELETE FROM ${table}`);
+  await client.batch([...deletes, ...seedStatements()], "write");
+}
+
 export function demoWritesAllowed() {
-  return process.env.NODE_ENV !== "production";
+  return process.env.NODE_ENV === "development" && !process.env.VERCEL && databaseMode() === "local";
 }

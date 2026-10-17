@@ -4,7 +4,7 @@ Mobile-first MVP khám phá điểm tham quan Hà Nội, lập lịch trình d�
 
 ## Chạy cục bộ
 
-Yêu cầu **Node.js 25.x** (dùng `node:sqlite`) và npm.
+Yêu cầu Node.js 24.x và npm.
 
 ```bash
 npm install
@@ -13,7 +13,7 @@ npm run db:seed
 npm run dev
 ```
 
-Mở `http://localhost:3000`. Nếu dùng PowerShell, thay `copy` bằng `Copy-Item`. Seed cũng được khởi tạo tự động khi API truy cập database lần đầu. File SQLite nằm tại `data/truego.sqlite` và bị Git bỏ qua. Có thể đặt `DATABASE_PATH` để dùng đường dẫn SQLite khác.
+Mở `http://localhost:3000`. Nếu dùng PowerShell, thay `copy` bằng `Copy-Item`. Seed cũng được khởi tạo tự động khi API truy cập database lần đầu trong môi trường development. File SQLite nằm tại `data/truego.sqlite` và bị Git bỏ qua. Có thể đặt `DATABASE_PATH` để dùng đường dẫn SQLite khác. Ứng dụng không dùng Prisma.
 
 ## Demo luồng cảnh báo
 
@@ -30,12 +30,12 @@ API ghi dữ liệu dashboard chỉ hoạt động trong `NODE_ENV=development`.
 
 - 24 địa điểm Hà Nội; tên và vị trí gần đúng. Ảnh là **minh họa tạo bởi AI**, không phải ảnh thực địa được xác minh.
 - Giờ tham quan, giá vé, mức đông, thời lượng và trạng thái ban đầu là dữ liệu **demo/chưa xác minh**. API đánh dấu nguồn và thời gian cập nhật. Trạng thái không có cập nhật gần đây hiện “Chưa có thông tin mới”.
-- Dashboard ghi cập nhật, lịch sử, thông báo và revision vào SQLite. API địa điểm trả `Cache-Control: no-store`.
+- Dashboard development ghi cập nhật, lịch sử, thông báo và revision vào SQLite cục bộ. API địa điểm trả `Cache-Control: no-store`. Trên Vercel, dashboard chỉ đọc vì chưa có xác thực và phân quyền.
 - Bản đồ dùng OpenStreetMap/Leaflet với tile PNG chuẩn. Đường nối là minh họa; thời gian di chuyển tính từ khoảng cách địa lý, hệ số đường đi và tốc độ ước tính, **không phải dữ liệu định tuyến thực tế**.
 - Font Be Vietnam Pro và Noto Serif được đóng gói trong ứng dụng, có bộ ký tự tiếng Việt. Sở thích trong mục Cá nhân lưu tại trình duyệt để gợi ý điểm đến và chọn sẵn trên form tạo lịch trình.
 - Trạng thái điểm đến và mức đông quá 24 giờ được hiển thị là “Chưa có thông tin mới”; đây là ngưỡng trình bày của demo, không phải cam kết độ chính xác của nguồn.
 - Không có push notification khi đóng trình duyệt. Lịch trình và thông báo lưu trong localStorage của từng thiết bị; server không biết các lịch trình này.
-- Phản hồi địa điểm lưu với trạng thái chưa xác minh. Không có đánh giá sao được gắn nhãn xác minh.
+- Phản hồi địa điểm lưu với trạng thái chưa xác minh khi đã kết nối database bền vững. Nếu chưa cấu hình database trên production, API phản hồi trả 503 và không báo lưu thành công. Không có đánh giá sao được gắn nhãn xác minh.
 - PWA cache trang/ảnh đã xem để hỗ trợ ngoại tuyến cơ bản; API trạng thái không được cache bởi service worker và cần mạng.
 
 ## AI và thuật toán fallback
@@ -76,11 +76,28 @@ npm run test:e2e
 
 Vitest kiểm tra tạo lịch trình, giờ mở cửa, ngân sách, thay/khóa/đổi thứ tự, tính lại, phát hiện cập nhật, chống thông báo trùng, phương án thay thế, đổi giờ/thứ tự, chấp nhận/từ chối và sao lưu/khôi phục. Playwright kiểm tra đóng cửa → thay điểm, đổi giờ mở cửa → điều chỉnh giờ, lưu sở thích, chống thêm điểm trùng và màn hình 320×640, 375×812, 390×844, 430×932, 1440×900.
 
-Kết quả xác minh ngày 17/10/2026: TypeScript strict và production build đạt; **18/18** unit test, **5/5** E2E test đạt; kiểm tra responsive không tràn ngang và không có lỗi runtime trên 320×640, 375×812, 390×844, 430×932, 1440×900 ở các trang chính; `npm audit` báo **0 lỗ hổng**. Tile OpenStreetMap trả HTTP 200 và hiển thị trên bản đồ. Production build tải font Noto Serif, không tràn ngang ở 390px; `GET /api/destinations` trả 200 và `PATCH /api/partner/destinations/d01` trả 403.
+Kết quả kiểm thử trước commit ngày 17/10/2026: `npm run build`, TypeScript strict, **18/18** unit test và **5/5** E2E test đạt; `npm audit` báo **0 lỗ hổng**. E2E kiểm tra các trang chính ở 320×640, 375×812, 390×844, 430×932 và 1440×900 không tràn ngang. Bản production thử cục bộ trả 24 địa điểm, trang chi tiết và lịch trình HTTP 200; khi chưa kết nối database, phản hồi HTTP 503 và ghi dashboard HTTP 403. Chế độ remote được thử với database libSQL dùng một lần trên máy cục bộ: phản hồi HTTP 201 và dữ liệu còn sau khi dừng server. Kết nối Turso qua mạng và deployment Vercel cần kiểm chứng riêng sau khi cấp tài khoản/biến môi trường.
 
-## Hướng triển khai production
+## Triển khai trên Vercel
 
-Mã hiện ưu tiên môi trường demo Node.js có ổ đĩa ghi được. Để vận hành công khai: chuyển SQLite sang PostgreSQL, thêm migration và seed tương ứng; xác thực/phân quyền dashboard; rate limit API ghi; xác minh và cập nhật nguồn dữ liệu thực tế; thay ước tính di chuyển bằng routing provider; bổ sung monitoring, backup và retention. Không đặt `/partner-demo` với quyền ghi công khai. Triển khai bằng `npm run build && npm start` trên Node 25 có persistent volume chỉ phù hợp môi trường nội bộ.
+Dự án dùng Next.js App Router và Function của Vercel; không dùng static export, `basePath` của GitHub Pages hoặc CNAME cũ. Import repository GitHub vào Vercel, chọn **Next.js**, build bằng `npm run build`, output theo mặc định của framework và Node.js 24.x. Sau khi kết nối repository, mỗi lần push lên `main` sẽ tạo deployment theo cấu hình dự án Vercel. Vercel cấp URL HTTPS dạng `*.vercel.app`; tên miền riêng cần cấu hình DNS riêng.
+
+Filesystem của Vercel Function không phù hợp để ghi SQLite cục bộ lâu dài. Production có hai chế độ:
+
+1. **Không có `TURSO_DATABASE_URL` và `TURSO_AUTH_TOKEN`:** API đọc danh sách/chi tiết từ 24 địa điểm seed đóng gói cùng mã nguồn. Tìm kiếm, bản đồ, lập và lưu lịch trình trong trình duyệt tiếp tục hoạt động. Phản hồi địa điểm trả 503; lịch sử cập nhật trống; dashboard chỉ đọc.
+2. **Có cả hai biến:** ứng dụng đọc địa điểm và lưu phản hồi vào Turso/libSQL. Dữ liệu không được migrate hay seed tự động trong request. Trước khi bật hai biến trên Vercel, tạo **database Turso mới và rỗng**, rồi chạy `npm run db:setup:remote` đúng một lần với hai biến đó trong shell cục bộ. Script từ chối database đã có bảng và không thay đổi database hiện hữu. Không dùng script này trên database production đang chứa dữ liệu.
+
+Ví dụ PowerShell, thay giá trị bằng URL và token của database **mới**; không đưa token vào Git hoặc tài liệu:
+
+```powershell
+$env:TURSO_DATABASE_URL = "libsql://<database-host>"
+$env:TURSO_AUTH_TOKEN = "<database-token>"
+npm run db:setup:remote
+```
+
+Sau đó đặt `TURSO_DATABASE_URL` và `TURSO_AUTH_TOKEN` trong Vercel Project Settings → Environment Variables cho Production và Preview nếu muốn preview dùng cùng database. Nên dùng database riêng cho Preview để tránh trộn dữ liệu. Đặt `AI_API_KEY` trên Vercel nếu muốn bật phần giải thích do LLM sinh; tùy chọn `AI_PROVIDER_URL`, `AI_MODEL`. Không đặt secret với tiền tố `NEXT_PUBLIC_`. Redeploy sau khi đổi biến môi trường. Nếu chỉ triển khai chế độ seed, không cần cấu hình Turso và planner sẽ dùng thuật toán demo khi không có AI key.
+
+Lịch trình và sở thích hiện lưu trong `localStorage` của từng trình duyệt, không đồng bộ qua thiết bị. Production không cho ghi trạng thái địa điểm hay reset demo; cần đăng nhập, phân quyền và bảo vệ API trước khi mở quyền ghi. Trước khi vận hành với lượng truy cập thực, cần rate limit endpoint phản hồi, giám sát/backup và nguồn dữ liệu địa điểm đã xác minh. Bản đồ OpenStreetMap và ảnh cần kết nối mạng.
 
 ## Những gì đã hoàn thành
 

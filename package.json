@@ -9,11 +9,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "db:seed": "node scripts/seed.mjs"
+    "db:seed": "node scripts/seed.mjs",
+    "db:setup:remote": "node scripts/seed.mjs --remote"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",
     "@fontsource/noto-serif": "^5.3.0",
+    "@libsql/client": "^0.18.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "next": "16.4.2",
