@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AppProvider } from "@/components/AppProvider";
 import SiteChrome from "@/components/SiteChrome";
-import "leaflet/dist/leaflet.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import "@fontsource/be-vietnam-pro/400.css";
 import "@fontsource/be-vietnam-pro/500.css";
 import "@fontsource/be-vietnam-pro/600.css";
