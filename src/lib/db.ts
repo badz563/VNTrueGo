@@ -1,15 +1,27 @@
 import "server-only";
 import { createClient, type Client, type InStatement } from "@libsql/client";
+import { createClient as createWebClient } from "@libsql/client/web";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import seedRows from "../../data/seed.json";
 import type { Crowd, Destination, Status } from "./types";
 
 type Row = Record<string, unknown>;
+function plainRows<T>(rows:Row[]):T[]{return JSON.parse(JSON.stringify(rows)) as T[];}
 const root = process.cwd();
 let connection: Promise<Client> | null = null;
+type SeedRow = (typeof seedRows)[number];
+function seedDetails(row: SeedRow) {
+  const extra = row as SeedRow & { description?: string; descriptionEn?: string; sourceUrl?: string };
+  return {
+    description: extra.description || `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
+    descriptionEn: extra.descriptionEn || `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
+    sourceUrl: extra.sourceUrl
+  };
+}
 
 export function databaseMode(): "local" | "remote" | "seed" {
+  if (process.env.TRUEGO_LOCAL_DEMO === "1" && !process.env.VERCEL) return "local";
   if (Boolean(process.env.TURSO_DATABASE_URL) !== Boolean(process.env.TURSO_AUTH_TOKEN)) {
     throw new Error("TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be configured together.");
   }
@@ -20,12 +32,11 @@ export function databaseMode(): "local" | "remote" | "seed" {
 function seedStatements(): InStatement[] {
   const now = new Date().toISOString();
   const statements: InStatement[] = seedRows.map(row => ({
-    sql: `INSERT INTO destinations
+    sql: `INSERT OR IGNORE INTO destinations
       (id,slug,name,name_en,category,description,description_en,lat,lng,address,image,tags_json,duration,price,opening_json,closed_days_json,status,status_rev,status_updated_at,status_source,crowd,crowd_updated_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     args: [row.id, row.slug, row.name, row.nameEn, row.category,
-      `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
-      `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
+      seedDetails(row).description, seedDetails(row).descriptionEn,
       row.lat, row.lng, row.address, row.image, JSON.stringify(row.tags), row.duration, row.price,
       JSON.stringify({ open: "08:00", close: "17:00" }), JSON.stringify([]),
       "unknown", 1, null, "demo", "unknown", null, now]
@@ -37,15 +48,19 @@ function seedStatements(): InStatement[] {
 async function connect(): Promise<Client> {
   if (databaseMode() === "remote") {
     // Remote schema and seed are provisioned explicitly; requests never migrate production data.
-    return createClient({ url: process.env.TURSO_DATABASE_URL!, authToken: process.env.TURSO_AUTH_TOKEN! });
+    return createWebClient({ url: process.env.TURSO_DATABASE_URL!, authToken: process.env.TURSO_AUTH_TOKEN! });
   }
   const file = process.env.DATABASE_PATH || path.join(root, "data", "truego.sqlite");
   mkdirSync(path.dirname(file), { recursive: true });
   const client = createClient({ url: `file:${file.replaceAll("\\", "/")}` });
   await client.execute("PRAGMA foreign_keys = ON");
   await client.executeMultiple(readFileSync(path.join(root, "migrations", "001_init.sql"), "utf8"));
-  const count = await client.execute("SELECT COUNT(*) AS n FROM destinations");
-  if (Number(count.rows[0].n) === 0) await client.batch(seedStatements(), "write");
+  await client.executeMultiple(readFileSync(path.join(root, "migrations", "002_accounts_reviews.sql"), "utf8"));
+  await client.executeMultiple(readFileSync(path.join(root, "migrations", "003_partner_content.sql"), "utf8"));
+  await client.executeMultiple(readFileSync(path.join(root, "migrations", "004_saved_data.sql"), "utf8"));
+  await client.executeMultiple(readFileSync(path.join(root, "migrations", "005_review_claims.sql"), "utf8"));
+  // Add missing demo places without changing existing destinations or user data.
+  await client.batch(seedStatements(), "write");
   return client;
 }
 
@@ -59,13 +74,14 @@ function seedDestination(row: (typeof seedRows)[number]): Destination {
   return {
     id: row.id, slug: row.slug, name: row.name, nameEn: row.nameEn,
     category: row.category,
-    description: `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
-    descriptionEn: `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
+    description: seedDetails(row).description,
+    descriptionEn: seedDetails(row).descriptionEn,
+    sourceUrl: seedDetails(row).sourceUrl,
     lat: row.lat, lng: row.lng, address: row.address, image: row.image,
     tags: row.tags, duration: row.duration, price: row.price,
     opening: { open: "08:00", close: "17:00" }, closedDays: [],
     status: "unknown", statusRev: 1, statusUpdatedAt: null, statusSource: "demo",
-    crowd: "unknown", crowdUpdatedAt: null, updatedAt: "2026-10-17"
+    crowd: "unknown", crowdUpdatedAt: null, updatedAt: "2026-10-17",ratingCount:0,rating:null
   };
 }
 
@@ -83,14 +99,20 @@ export function mapDestination(row: Row): Destination {
     statusUpdatedAt: row.status_updated_at ? String(row.status_updated_at) : null,
     statusSource: String(row.status_source), crowd: row.crowd as Crowd,
     crowdUpdatedAt: row.crowd_updated_at ? String(row.crowd_updated_at) : null,
-    updatedAt: String(row.updated_at)
+    updatedAt: String(row.updated_at),
+    sourceUrl: seedRows.find(item => item.id === String(row.id)) ? seedDetails(seedRows.find(item => item.id === String(row.id))!).sourceUrl : undefined,
+    ratingCount: row.rating_count == null ? 0 : Number(row.rating_count),
+    rating: row.avg_tenths == null ? null : Number(row.avg_tenths)/10
   };
 }
 
 export async function allDestinations(): Promise<Destination[]> {
   const client = await db();
   if (!client) return seedRows.map(seedDestination);
-  const result = await client.execute("SELECT * FROM destinations ORDER BY id");
+  const result = await client.execute(`SELECT p.*,q.rating_count,q.avg_tenths FROM destinations p LEFT JOIN
+    (SELECT r.destination_id,COUNT(*) AS rating_count,AVG(d.rating_tenths) AS avg_tenths
+      FROM reviews r JOIN review_details d ON d.review_id=r.id WHERE d.status='approved' GROUP BY r.destination_id) q
+    ON q.destination_id=p.id ORDER BY p.id`);
   return result.rows.map(row => mapDestination(row as Row));
 }
 
@@ -104,12 +126,25 @@ export async function destinationBySlug(slug: string): Promise<Destination | nul
   const row = result.rows[0];
   if (!row) return null;
   const destination = mapDestination(row as Row);
-  const [announcements, reviews] = await Promise.all([
+  const [announcements, reviews, events, offers, seasons] = await Promise.all([
     client.execute({ sql: "SELECT id,message,created_at AS createdAt,source FROM destination_announcements WHERE destination_id = ? ORDER BY id DESC LIMIT 10", args: [destination.id] }),
-    client.execute({ sql: "SELECT id,author,body,verification FROM reviews WHERE destination_id = ? ORDER BY id DESC LIMIT 10", args: [destination.id] })
+    client.execute({ sql: `SELECT r.id,r.author,r.body,r.verification,d.rating_tenths AS ratingTenths
+      FROM reviews r JOIN review_details d ON d.review_id=r.id
+      WHERE r.destination_id=? AND d.status='approved' ORDER BY r.id DESC LIMIT 10`, args: [destination.id] }),
+    client.execute({sql:"SELECT id,title,description,starts_at AS startsAt,ends_at AS endsAt,ticket_price AS ticketPrice FROM events WHERE destination_id=? AND status='active' AND ends_at>=? ORDER BY starts_at LIMIT 10",args:[destination.id,new Date().toISOString()]}),
+    client.execute({sql:"SELECT id,title,terms,starts_at AS startsAt,ends_at AS endsAt,promo_code AS promoCode,booking_url AS bookingUrl FROM offers WHERE destination_id=? AND status='active' AND starts_at<=? AND ends_at>=? ORDER BY ends_at LIMIT 10",args:[destination.id,new Date().toISOString(),new Date().toISOString()]}),
+    client.execute({sql:"SELECT id,title,body,source,updated_at AS updatedAt FROM seasonal_information WHERE destination_id=? ORDER BY updated_at DESC LIMIT 5",args:[destination.id]})
   ]);
-  destination.announcements = announcements.rows as unknown as Destination["announcements"];
-  destination.reviews = reviews.rows as unknown as Destination["reviews"];
+  destination.announcements = plainRows<NonNullable<Destination["announcements"]>[number]>(announcements.rows as Row[]);
+  destination.reviews = plainRows<NonNullable<Destination["reviews"]>[number]>(reviews.rows as Row[]);
+  destination.events=plainRows<NonNullable<Destination["events"]>[number]>(events.rows as Row[]);
+  destination.offers=plainRows<NonNullable<Destination["offers"]>[number]>(offers.rows as Row[]);
+  destination.seasons=plainRows<NonNullable<Destination["seasons"]>[number]>(seasons.rows as Row[]);
+  const rating = await client.execute({sql:`SELECT COUNT(*) AS n, AVG(d.rating_tenths) AS avg_rating
+    FROM reviews r JOIN review_details d ON d.review_id=r.id
+    WHERE r.destination_id=? AND d.status='approved'`,args:[destination.id]});
+  destination.ratingCount=Number(rating.rows[0]?.n||0);
+  destination.rating=destination.ratingCount ? Number(rating.rows[0]?.avg_rating)/10 : null;
   return destination;
 }
 
@@ -124,9 +159,10 @@ export async function resetDemo() {
   if (!demoWritesAllowed()) throw new Error("Demo reset is disabled outside local development.");
   const client = await db();
   if (!client) throw new Error("Local database unavailable.");
-  const deletes = ["destination_status_history", "destination_announcements", "crowd_forecasts", "feedback", "reviews", "destinations"]
-    .map(table => `DELETE FROM ${table}`);
-  await client.batch([...deletes, ...seedStatements()], "write");
+  const restores:InStatement[]=seedRows.map(row=>({sql:`UPDATE destinations SET status='unknown',crowd='unknown',status_rev=status_rev+1,
+    status_updated_at=NULL,crowd_updated_at=NULL,status_source='demo',opening_json=?,description=?,updated_at=? WHERE id=?`,
+    args:[JSON.stringify({open:"08:00",close:"17:00"}),seedDetails(row).description,new Date().toISOString(),row.id]}));
+  await client.batch(["DELETE FROM destination_status_history","DELETE FROM destination_announcements","DELETE FROM crowd_forecasts",...restores],"write");
 }
 
 export function demoWritesAllowed() {

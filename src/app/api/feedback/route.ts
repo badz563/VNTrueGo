@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { sameOrigin } from "@/lib/auth";
+import { rateLimit } from "@/lib/rateLimit";
 export const runtime = "nodejs";
 const schema = z.object({ destinationId: z.string().min(1), message: z.string().trim().min(10).max(500) });
 export async function POST(request: Request) {
+  if(!sameOrigin(request))return NextResponse.json({error:"Nguồn yêu cầu không hợp lệ."},{status:403});
+  const limited=rateLimit(request,"feedback",10);if(limited)return limited;
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Phản hồi cần từ 10 đến 500 ký tự." }, { status: 400 });
   const sql = await db();

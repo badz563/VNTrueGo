@@ -30,7 +30,7 @@ export function travelMinutes(a: Destination | undefined, b: Destination, transp
 }
 export function scoreDestination(destination: Destination, input: PlanInput) {
   const notes = input.notes.toLocaleLowerCase();
-  const inferred = ["lịch sử","văn hóa","nghệ thuật","thiên nhiên","nhiếp ảnh","yên tĩnh"].filter(tag=>notes.includes(tag));
+  const inferred = ["lịch sử","văn hóa","nghệ thuật","thiên nhiên","nhiếp ảnh","yên tĩnh","ẩm thực"].filter(tag=>notes.includes(tag));
   const interests = [...new Set([...input.interests,...inferred])].filter(t => destination.tags.includes(t)).length;
   const avoid = input.avoid.toLocaleLowerCase();
   if (avoid && [destination.name, destination.category, ...destination.tags].some(t => avoid.includes(t.toLocaleLowerCase()))) return -100;
@@ -82,7 +82,7 @@ export function makeTrip(input: PlanInput, destinations: Destination[]): Trip {
     let current = 9 * 60;
     let previous: Destination | undefined;
     for (let slot = 0; slot < perDay; slot++) {
-      const candidates = destinations.filter(d => !used.has(d.id)).map(d => {
+      const candidates = destinations.filter(d => !used.has(d.id) && d.category!=="Khách sạn").map(d => {
         const move = travelMinutes(previous, d, input.transport);
         const start = Math.max(current + move, toMinutes(d.opening.open));
         const cost = d.price * input.people;
@@ -117,6 +117,7 @@ export function makeTrip(input: PlanInput, destinations: Destination[]): Trip {
   return recalculateTrip(trip, destinations);
 }
 export function replaceActivity(trip: Trip, activityId: string, replacement: Destination, destinations: Destination[]) {
+  if (replacement.category === "Khách sạn") throw new Error("Khách sạn hiện chỉ hỗ trợ tra cứu, chưa thể xếp vào lịch trình theo giờ.");
   if (replacement.status === "closed" || replacement.status === "overloaded") throw new Error("Địa điểm thay thế hiện không phù hợp.");
   const days = trip.days.map(day => ({
     ...day, activities: day.activities.map(activity => {
@@ -149,6 +150,7 @@ export function toggleLock(trip: Trip, activityId: string) {
   })), updatedAt: new Date().toISOString() };
 }
 export function addActivity(trip: Trip, dayIndex: number, destination: Destination, destinations: Destination[]) {
+  if (destination.category === "Khách sạn") throw new Error("Khách sạn hiện chỉ hỗ trợ tra cứu, chưa thể xếp vào lịch trình theo giờ.");
   if (destination.status === "closed" || destination.status === "overloaded") throw new Error("Địa điểm hiện không thể thêm vào lịch trình.");
   const days = trip.days.map((day, index) => index !== dayIndex ? day : ({
     ...day, activities: [...day.activities, {
@@ -183,7 +185,7 @@ export function optimizeTrip(trip: Trip, destinations: Destination[]) {
 export function alternativesFor(destination: Destination, destinations: Destination[], trip?: Trip) {
   const used = new Set(trip?.days.flatMap(d => d.activities.map(a => a.destinationId)) || []);
   return destinations.filter(d => d.id !== destination.id && !used.has(d.id) &&
-    d.status !== "closed" && d.status !== "overloaded")
+    d.status !== "closed" && d.status !== "overloaded" && d.category !== "Khách sạn")
     .sort((a, b) =>
       (Number(b.category === destination.category) * 10 - distanceKm(destination, b)) -
       (Number(a.category === destination.category) * 10 - distanceKm(destination, a)))

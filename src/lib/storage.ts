@@ -40,3 +40,4 @@ export function importBackup(raw:string):Trip[]{
   return parsed.data.trips;
 }
 export function exportBackup(trips:Trip[]):string{return JSON.stringify({version:1,trips},null,2);}
+export function parseTrip(value:unknown):Trip|null{const result=trip.safeParse(value);return result.success?result.data:null;}

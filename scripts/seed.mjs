@@ -38,8 +38,8 @@ try {
       (id,slug,name,name_en,category,description,description_en,lat,lng,address,image,tags_json,duration,price,opening_json,closed_days_json,status,status_rev,status_updated_at,status_source,crowd,crowd_updated_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     args: [row.id,row.slug,row.name,row.nameEn,row.category,
-      `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
-      `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
+      row.description || `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
+      row.descriptionEn || `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
       row.lat,row.lng,row.address,row.image,JSON.stringify(row.tags),row.duration,row.price,
       JSON.stringify({open:"08:00",close:"17:00"}),JSON.stringify([]),
       "unknown",1,null,"demo","unknown",null,now]

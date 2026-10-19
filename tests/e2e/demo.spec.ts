@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 test("visitor trip reacts to partner closure and accepts a replacement",async({browser,request})=>{
-  await request.post("/api/partner/reset");
+  await request.post("/api/partner/reset",{headers:{Origin:"http://127.0.0.1:3101"}});
   const context=await browser.newContext({viewport:{width:390,height:844}});
   const visitor=await context.newPage();
   await visitor.goto("/trip");
@@ -23,10 +23,10 @@ test("visitor trip reacts to partner closure and accepts a replacement",async({b
   expect(changed.destinationId).not.toBe(first.destinationId);
   expect(changed.start).toMatch(/^\d{2}:\d{2}$/);
   await context.close();
-  await request.post("/api/partner/reset");
+  await request.post("/api/partner/reset",{headers:{Origin:"http://127.0.0.1:3101"}});
 });
 test("changed opening hours offer a time adjustment that updates the saved trip",async({browser,request})=>{
-  await request.post("/api/partner/reset");
+  await request.post("/api/partner/reset",{headers:{Origin:"http://127.0.0.1:3101"}});
   const context=await browser.newContext({viewport:{width:390,height:844}});
   const visitor=await context.newPage();
   await visitor.goto("/trip");
@@ -39,7 +39,7 @@ test("changed opening hours offer a time adjustment that updates the saved trip"
   const affected=destinations.find((d:{id:string})=>d.id===first.destinationId);
   const [hours,minutes]=first.start.split(":").map(Number);
   const newOpen=String(hours+Math.floor((minutes+30)/60)).padStart(2,"0")+":"+String((minutes+30)%60).padStart(2,"0");
-  const update=await request.patch(`/api/partner/destinations/${affected.id}`,{data:{opening:{open:newOpen,close:"23:00"}}});
+  const update=await request.patch(`/api/partner-demo/destinations/${affected.id}`,{headers:{Origin:"http://127.0.0.1:3101"},data:{opening:{open:newOpen,close:"23:00"}}});
   expect(update.ok()).toBe(true);
   await visitor.goto("/alerts");
   await visitor.getByRole("button",{name:"Đổi giờ tham quan"}).click();
@@ -49,7 +49,7 @@ test("changed opening hours offer a time adjustment that updates the saved trip"
   expect(changed.start).toBe(newOpen);
   expect(changed.snapshotRev).toBeGreaterThan(first.snapshotRev);
   await context.close();
-  await request.post("/api/partner/reset");
+  await request.post("/api/partner/reset",{headers:{Origin:"http://127.0.0.1:3101"}});
 });
 test("saved interests survive reload and preselect a new itinerary",async({page})=>{
   await page.goto("/profile");

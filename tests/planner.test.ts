@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Alert, Destination, PlanInput, Trip } from "../src/lib/types";
-import { addActivity, alternativesFor, availableAlertAdjustments, detectAlerts, isOpenAt, makeTrip, moveActivity, optimizeTrip, recalculateTrip, replaceActivity, resolveAlert, resolveAlertAdjustment, toggleLock, travelMinutes, tripCost } from "../src/lib/planner";
+import type { Alert, Destination, PlanInput } from "../src/lib/types";
+import { addActivity, alternativesFor, availableAlertAdjustments, detectAlerts, isOpenAt, makeTrip, moveActivity, optimizeTrip, replaceActivity, resolveAlert, resolveAlertAdjustment, toggleLock, travelMinutes, tripCost } from "../src/lib/planner";
 import { exportBackup, importBackup, parseStored } from "../src/lib/storage";
 const base:Destination={
   id:"a",slug:"a",name:"Museum A",nameEn:"Museum A",category:"Bảo tàng",
@@ -37,6 +37,13 @@ describe("planner constraints and edits",()=>{
     const trip=makeTrip({...input,budget:0},destinations);
     expect(tripCost(trip)).toBe(0);
     expect(trip.days.flatMap(d=>d.activities).every(a=>a.cost===0)).toBe(true);
+  });
+  it("lists lodging without scheduling it as a timed sightseeing activity",()=>{
+    const hotel:Destination={...base,id:"hotel",slug:"hotel",name:"Hotel",category:"Khách sạn",tags:["lưu trú"],price:0};
+    const trip=makeTrip({...input,interests:["lưu trú"],budget:100000},[hotel,...destinations]);
+    expect(trip.days.flatMap(day=>day.activities).some(activity=>activity.destinationId===hotel.id)).toBe(false);
+    expect(()=>addActivity(trip,0,hotel,[hotel,...destinations])).toThrow(/Khách sạn/);
+    expect(alternativesFor(base,[hotel,...destinations],trip).some(place=>place.id===hotel.id)).toBe(false);
   });
   it("replaces an activity and recalculates cost and travel",()=>{
     const trip=create();const first=trip.days[0].activities[0];

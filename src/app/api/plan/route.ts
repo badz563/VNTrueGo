@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { allDestinations } from "@/lib/db";
+import { sameOrigin } from "@/lib/auth";
 import { makeTrip, tripCost } from "@/lib/planner";
+import { rateLimit } from "@/lib/rateLimit";
 export const runtime = "nodejs";
 const schema = z.object({
   region: z.string().min(2).max(80), startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -40,6 +42,8 @@ async function addAiReasons(trip: ReturnType<typeof makeTrip>, names: string[]):
   } catch { return null; } finally { clearTimeout(timeout); }
 }
 export async function POST(request: Request) {
+  if(!sameOrigin(request))return NextResponse.json({error:"Nguồn yêu cầu không hợp lệ."},{status:403});
+  const limited=rateLimit(request,"plan",60);if(limited)return limited;
   try {
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: "Vui lòng kiểm tra thông tin lịch trình.", issues: parsed.error.flatten() }, { status: 400 });
@@ -50,7 +54,7 @@ export async function POST(request: Request) {
     const names = trip.days.flatMap(day => day.activities.map(a => destinations.find(d => d.id === a.destinationId)?.name || ""));
     trip = await addAiReasons(trip, names) || trip;
     return NextResponse.json({ trip, totalCost: tripCost(trip), mode: trip.mode });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Không tạo được lịch trình." }, { status: 400 });
+  } catch {
+    return NextResponse.json({ error: "Không tạo được lịch trình. Vui lòng thử lại." }, { status: 500 });
   }
 }

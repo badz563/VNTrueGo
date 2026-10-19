@@ -7,10 +7,19 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:seed": "node scripts/seed.mjs",
-    "db:setup:remote": "node scripts/seed.mjs --remote"
+    "db:setup:remote": "node scripts/seed.mjs --remote",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:migrate:remote": "node scripts/migrate.mjs --remote",
+    "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
+    "admin:bootstrap:remote": "node scripts/bootstrap-admin.mjs --remote",
+    "demo:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo/start-demo.ps1",
+    "demo:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo/stop-demo.ps1",
+    "demo:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo/status-demo.ps1",
+    "demo:restart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/demo/restart-demo.ps1"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",
@@ -31,6 +40,8 @@
     "@types/node": "^22.13.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.2",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0",
     "vitest": "4.1.12"

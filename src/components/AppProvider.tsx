@@ -60,16 +60,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     finally { setLoading(false); }
   },[update]);
   useEffect(() => {
+    let active = true;
     if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => {});
-    const loaded = readSaved(); storedRef.current = loaded; setStored(loaded); ready.current = true;
-    void refresh();
+    queueMicrotask(() => {
+      if (!active) return;
+      const loaded = readSaved(); storedRef.current = loaded; setStored(loaded); ready.current = true;
+      void refresh();
+    });
     const poll = setInterval(() => void refresh(),15000);
     const focus = () => { if (document.visibilityState === "visible") void refresh(); };
     document.addEventListener("visibilitychange",focus);
     window.addEventListener("focus",focus);
     const sync = (event: StorageEvent) => { if (event.key === STORAGE) { const value = readSaved(); storedRef.current = value; setStored(value); } };
     window.addEventListener("storage",sync);
-    return () => { clearInterval(poll); document.removeEventListener("visibilitychange",focus); window.removeEventListener("focus",focus); window.removeEventListener("storage",sync); };
+    return () => { active=false;clearInterval(poll); document.removeEventListener("visibilitychange",focus); window.removeEventListener("focus",focus); window.removeEventListener("storage",sync); };
   },[refresh]);
   const saveTrip = useCallback((trip: Trip) => update(current => ({
     ...current, trips: [trip,...current.trips.filter(t => t.id !== trip.id)], activeId: trip.id
@@ -84,7 +88,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setPreferences = useCallback((tags: string[]) => update(current => ({ ...current, preferences: tags })),[update]);
   const activeTrip = stored.trips.find(t => t.id === stored.activeId) || stored.trips[0] || null;
   const addToTrip = useCallback((destination: Destination) => {
-    if (destination.status === "closed" || destination.status === "overloaded") return "unavailable" as const;
+    if (destination.status === "closed" || destination.status === "overloaded" || destination.category === "Khách sạn") return "unavailable" as const;
     const current = storedRef.current;
     const trip = current.trips.find(t => t.id === current.activeId) || current.trips[0];
     if (trip) {

@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { currentUser, sameOrigin } from "@/lib/auth";
+import { db } from "@/lib/db";
+export const runtime="nodejs";
+async function context(request:Request,id:string){if(!sameOrigin(request))return {error:NextResponse.json({error:"Nguồn yêu cầu không hợp lệ."},{status:403})};const user=await currentUser();if(!user)return {error:NextResponse.json({error:"Vui lòng đăng nhập."},{status:401})};const sql=await db();if(!sql)return {error:NextResponse.json({error:"Database chưa khả dụng."},{status:503})};return {user,sql,id};}
+export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}){const result=await context(request,(await params).id);if(result.error)return result.error;const {user,sql,id}=result;const place=await sql!.execute({sql:"SELECT id FROM destinations WHERE id=?",args:[id]});if(!place.rows.length)return NextResponse.json({error:"Địa điểm không tồn tại."},{status:404});await sql!.execute({sql:"INSERT OR IGNORE INTO favorite_destinations(user_id,destination_id,created_at) VALUES(?,?,?)",args:[user!.id,id,new Date().toISOString()]});return NextResponse.json({favorite:true});}
+export async function DELETE(request:Request,{params}:{params:Promise<{id:string}>}){const result=await context(request,(await params).id);if(result.error)return result.error;const {user,sql,id}=result;await sql!.execute({sql:"DELETE FROM favorite_destinations WHERE user_id=? AND destination_id=?",args:[user!.id,id]});return NextResponse.json({favorite:false});}

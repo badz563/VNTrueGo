@@ -2,8 +2,10 @@ node_modules/
 .next/
 .vercel/
 data/*.sqlite*
+data/*.key
 .env*
 !.env.example
 test-results/
 playwright-report/
 *.tsbuildinfo
+.demo-runtime/

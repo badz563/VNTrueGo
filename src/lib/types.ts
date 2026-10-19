@@ -3,13 +3,17 @@ export type Crowd = "unknown" | "low" | "moderate" | "high";
 export type Language = "vi" | "en";
 export type Destination = {
   id: string; slug: string; name: string; nameEn: string | null; category: string;
-  description: string; descriptionEn: string | null; lat: number; lng: number;
+  description: string; descriptionEn: string | null; sourceUrl?: string; lat: number; lng: number;
   address: string; image: string; tags: string[]; duration: number; price: number;
   opening: { open: string; close: string }; closedDays: number[];
   status: Status; statusRev: number; statusUpdatedAt: string | null;
   statusSource: string; crowd: Crowd; crowdUpdatedAt: string | null;
   updatedAt: string; announcements?: { id: number; message: string; createdAt: string; source: string }[];
-  reviews?: { id: number; author: string; body: string; verification: string }[];
+  reviews?: { id: number; author: string; body: string; verification: string; ratingTenths: number }[];
+  rating?: number | null; ratingCount?: number;
+  events?: {id:string;title:string;description:string;startsAt:string;endsAt:string;ticketPrice:number|null}[];
+  offers?: {id:string;title:string;terms:string;startsAt:string;endsAt:string;promoCode:string|null;bookingUrl:string|null}[];
+  seasons?: {id:string;title:string;body:string;source:string;updatedAt:string}[];
 };
 export type PlanInput = {
   region: string; startDate: string; endDate: string; people: number; budget: number;

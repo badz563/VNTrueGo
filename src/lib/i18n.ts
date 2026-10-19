@@ -36,11 +36,12 @@ export function t(lang: Language, key: WordKey) { return words[lang][key]; }
 export function statusText(lang: Language, status: Status) { return t(lang, status); }
 const categories:Record<string,string>={
   "Bảo tàng":"Museum","Di tích lịch sử":"Historic site","Di sản văn hóa":"Cultural heritage",
-  "Công trình kiến trúc":"Architecture","Danh lam thắng cảnh":"Scenic place"
+  "Công trình kiến trúc":"Architecture","Danh lam thắng cảnh":"Scenic place",
+  "Quán ăn":"Eatery","Cà phê":"Cafe","Nhà hàng":"Restaurant","Khách sạn":"Hotel"
 };
 const interests:Record<string,string>={
   "lịch sử":"History","văn hóa":"Culture","nghệ thuật":"Art","thiên nhiên":"Nature",
-  "nhiếp ảnh":"Photography","yên tĩnh":"Quiet places"
+  "nhiếp ảnh":"Photography","yên tĩnh":"Quiet places","ẩm thực":"Food"
 };
 export function categoryText(lang:Language,value:string){return lang==="en"?categories[value]||value:value;}
 export function interestText(lang:Language,value:string){return lang==="en"?interests[value]||value:value;}

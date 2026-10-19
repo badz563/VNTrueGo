@@ -16,7 +16,8 @@ export const metadata:Metadata={
   title:{default:"VietNam TrueGo | Khám phá Hà Nội",template:"%s | VietNam TrueGo"},
   description:"Khám phá điểm tham quan Hà Nội, tạo lịch trình cá nhân và nhận cảnh báo thay đổi trong bản demo TrueGo.",
   applicationName:"VietNam TrueGo",
-  manifest:"/manifest.webmanifest"
+  manifest:"/manifest.webmanifest",
+  icons:{icon:"/brand-logo.png",apple:"/brand-logo.png"}
 };
 export const viewport:Viewport={width:"device-width",initialScale:1,themeColor:"#245C4F"};
 export default function RootLayout({children}:{children:React.ReactNode}) {

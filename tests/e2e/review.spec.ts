@@ -1,0 +1,31 @@
+import { test, expect } from "@playwright/test";
+
+test("rating stars and slider save a pending fractional review",async({page,request})=>{
+  const email=`rating-${Date.now()}@example.test`;
+  await page.goto("/account");
+  await page.getByRole("button",{name:"Đăng ký"}).click();
+  await page.getByLabel("Tên hiển thị").fill("Traveler Test");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Mật khẩu").fill("TemporaryPassword123!");
+  await page.getByRole("button",{name:"Tạo tài khoản"}).click();
+  await expect(page.getByText(`Xin chào, Traveler Test`)).toBeVisible();
+  await page.goto("/destinations/van-mieu-quoc-tu-giam");
+  const form=page.locator("#review-form");
+  await expect(form.getByText("Đánh giá của bạn: 0.0/5")).toBeVisible();
+  await form.getByRole("button",{name:"4 sao"}).click();
+  await expect(form.getByText("Đánh giá của bạn: 4.0/5")).toBeVisible();
+  const slider=form.getByRole("slider");
+  await slider.focus();await slider.press("ArrowRight");await slider.press("ArrowRight");
+  await expect(form.getByText("Đánh giá của bạn: 4.2/5")).toBeVisible();
+  await expect(form.locator(".rating-star-buttons button").nth(4).locator(".rating-fill")).toHaveAttribute("style",/width: 20%/);
+  await form.getByLabel("Nội dung đánh giá").fill("Đây là một trải nghiệm minh họa để kiểm tra điểm lẻ và quy trình chờ duyệt.");
+  await form.getByLabel("Ngày trải nghiệm").fill("2026-10-18");
+  await form.getByLabel("Thông tin bằng chứng riêng tư").fill(`checkin-test-${Date.now()}`);
+  await form.getByRole("button",{name:"Gửi chờ duyệt"}).click();
+  await expect(form.getByText("Đã lưu đánh giá ở trạng thái chờ duyệt.")).toBeVisible();
+  const mine=await (await page.request.get("/api/reviews/mine")).json();
+  expect(mine.reviews[0].ratingTenths).toBe(42);
+  expect(mine.reviews[0].status).toBe("pending");
+  const publicDetail=await (await request.get("/api/destinations/van-mieu-quoc-tu-giam")).json();
+  expect(publicDetail.destination.reviews.some((review:{id:number})=>review.id===mine.reviews[0].id)).toBe(false);
+});

@@ -1,104 +1,100 @@
 # VietNam TrueGo
 
-Mobile-first MVP khám phá điểm tham quan Hà Nội, lập lịch trình dựa trên dữ liệu có cấu trúc và cảnh báo khi địa điểm trong lịch trình thay đổi. Không có đăng nhập, đặt ăn uống hoặc lưu trú.
+Ứng dụng du lịch mobile-first cho Hà Nội: khám phá địa điểm, lập lịch trình, Google Maps URLs, Google Translate, tài khoản, đánh giá chờ xác minh và cổng đối tác/admin. Logo do chủ dự án cung cấp. 29 địa điểm seed gồm 24 điểm tham quan và 5 điểm ăn uống/lưu trú. Các địa điểm mới có liên kết nguồn cho tên và địa chỉ; giờ, chi phí, tọa độ ghim và ảnh trong demo vẫn là **dữ liệu minh họa/chưa xác minh**.
 
 ## Chạy cục bộ
 
-Yêu cầu Node.js 24.x và npm.
+Yêu cầu Node.js 24 và npm. Trong thư mục dự án:
 
-```bash
+```powershell
 npm install
-copy .env.example .env.local
+Copy-Item .env.example .env.local
 npm run db:seed
+npm run db:migrate
 npm run dev
 ```
 
-Mở `http://localhost:3000`. Nếu dùng PowerShell, thay `copy` bằng `Copy-Item`. Seed cũng được khởi tạo tự động khi API truy cập database lần đầu trong môi trường development. File SQLite nằm tại `data/truego.sqlite` và bị Git bỏ qua. Có thể đặt `DATABASE_PATH` để dùng đường dẫn SQLite khác. Ứng dụng không dùng Prisma.
+Mở `http://localhost:3000`. Database local mặc định ở `data/truego.sqlite` (Git bỏ qua). Không có Prisma; app dùng `@libsql/client` với SQLite cục bộ hoặc Turso/libSQL từ xa. Migration 001 có seed địa điểm; migrations 002–005 thêm bảng/index và 005 điền khóa chống review trùng theo tài khoản/địa điểm, an toàn khi chạy lại. Không chạy `db:seed` để reset một database hiện hữu.
 
-## Demo luồng cảnh báo
+Trong development, khóa AES cho bằng chứng review được tạo tự động tại `data/evidence.key` và Git bỏ qua. Giữ file này khi cần đọc bằng chứng cũ. Production **bắt buộc** đặt `EVIDENCE_ENCRYPTION_KEY` gồm 64 ký tự hex; thay khóa mà không di chuyển dữ liệu sẽ khiến bằng chứng cũ không giải mã được.
 
-1. Vào **Lịch trình**, nhập ngày và tạo lịch trình. Lịch trình tự lưu vào trình duyệt.
-2. Mở **Partner demo** tại `/partner-demo` trong tab khác.
-3. Chọn một địa điểm thuộc lịch trình, bấm **Mô phỏng tạm đóng cửa**.
-4. Quay lại tab du khách. Ứng dụng kiểm tra ngay khi tab được kích hoạt hoặc sau tối đa 15 giây trong phiên hoạt động.
-5. Vào **Thông báo** để chọn một địa điểm thay thế. Chấp nhận sẽ cập nhật địa điểm, giờ, chi phí và thời gian di chuyển. “Để sau” giữ lịch trình và đánh dấu cảnh báo đã xem. Với thay đổi giờ mở cửa, ứng dụng còn đề xuất đổi giờ hoặc thứ tự nếu toàn bộ hoạt động trong ngày vẫn khả thi. Không tự sửa lịch trình trước khi người dùng chấp nhận.
-6. Bấm **Khôi phục demo** trên dashboard để đưa dữ liệu về trạng thái ban đầu.
+## Tài khoản và luồng demo
 
-API ghi dữ liệu dashboard chỉ hoạt động trong `NODE_ENV=development`. Bản production trả HTTP 403 cho các thao tác quản lý vì chưa có xác thực và phân quyền. Không triển khai công khai dashboard có quyền ghi nếu chưa bổ sung bảo vệ thực sự.
+1. Vào `/account` đăng ký một tài khoản du khách, mật khẩu tối thiểu 12 ký tự. Sau đăng nhập, `/account/settings` cho phép đổi tên hiển thị và mật khẩu.
+2. Tạo admin bằng lệnh riêng, dùng biến môi trường trong shell; script từ chối email đã tồn tại và không có mật khẩu mặc định:
 
-## Dữ liệu và giới hạn
+   ```powershell
+   $env:ADMIN_EMAIL = "admin@example.com"
+   $env:ADMIN_PASSWORD = "<mat-khau-rieng-toi-thieu-16-ky-tu>"
+   npm run admin:bootstrap
+   Remove-Item Env:ADMIN_PASSWORD
+   ```
 
-- 24 địa điểm Hà Nội; tên và vị trí gần đúng. Ảnh là **minh họa tạo bởi AI**, không phải ảnh thực địa được xác minh.
-- Giờ tham quan, giá vé, mức đông, thời lượng và trạng thái ban đầu là dữ liệu **demo/chưa xác minh**. API đánh dấu nguồn và thời gian cập nhật. Trạng thái không có cập nhật gần đây hiện “Chưa có thông tin mới”.
-- Dashboard development ghi cập nhật, lịch sử, thông báo và revision vào SQLite cục bộ. API địa điểm trả `Cache-Control: no-store`. Trên Vercel, dashboard chỉ đọc vì chưa có xác thực và phân quyền.
-- Bản đồ dùng OpenStreetMap/Leaflet với tile PNG chuẩn. Nếu mạng chặn máy chủ tile, ứng dụng báo lỗi và cung cấp liên kết mở vị trí trên Google Maps. Đường nối là minh họa; thời gian di chuyển tính từ khoảng cách địa lý, hệ số đường đi và tốc độ ước tính, **không phải dữ liệu định tuyến thực tế**.
-- Font Be Vietnam Pro và Noto Serif được đóng gói trong ứng dụng, có bộ ký tự tiếng Việt. Sở thích trong mục Cá nhân lưu tại trình duyệt để gợi ý điểm đến và chọn sẵn trên form tạo lịch trình.
-- Trạng thái điểm đến và mức đông quá 24 giờ được hiển thị là “Chưa có thông tin mới”; đây là ngưỡng trình bày của demo, không phải cam kết độ chính xác của nguồn.
-- Không có push notification khi đóng trình duyệt. Lịch trình và thông báo lưu trong localStorage của từng thiết bị; server không biết các lịch trình này.
-- Phản hồi địa điểm lưu với trạng thái chưa xác minh khi đã kết nối database bền vững. Nếu chưa cấu hình database trên production, API phản hồi trả 503 và không báo lưu thành công. Không có đánh giá sao được gắn nhãn xác minh.
-- PWA cache trang/ảnh đã xem để hỗ trợ ngoại tuyến cơ bản; API trạng thái không được cache bởi service worker và cần mạng.
+3. Đăng nhập admin tại `/account`, vào `/admin` để duyệt review hoặc cấp quyền Partner Manager/Staff cho tài khoản đã đăng ký và địa điểm cụ thể.
+4. Đối tác đăng nhập, vào `/partner` để cập nhật trạng thái, giờ tham khảo, thông báo, đăng sự kiện, ưu đãi hoặc thông tin mùa vụ. Staff không được sửa mô tả; ưu đãi/mùa vụ yêu cầu Manager hoặc Admin. API kiểm tra quyền ở server.
+5. Du khách vào `/destinations/[slug]`, gửi đánh giá với bằng chứng văn bản riêng tư. Review chỉ được công khai và tính điểm sau khi admin duyệt. Điểm 0,0–5,0 theo bước 0,1, lưu dưới dạng số phần mười.
+6. Vào `/trip` để tạo, khóa/thay/đổi thứ tự và lưu lịch trình trên thiết bị. Vào `/profile` để sao lưu lịch trình lên tài khoản hoặc mở lại; yêu thích địa điểm cũng được lưu theo tài khoản.
+7. Mở vị trí hoặc tuyến theo ngày bằng Google Maps URLs. `/translate` mở nội dung sang Google Translate theo hai chiều Việt–Anh.
 
-## AI và thuật toán fallback
+`/partner-demo` vẫn là sandbox **chỉ cho development**. API demo công khai trong máy cục bộ, nhưng tắt quyền ghi trên production. Nút reset demo chỉ đưa trạng thái/giờ/mô tả địa điểm seed và lịch sử trạng thái cục bộ về ban đầu; không xóa tài khoản, review hay lịch trình.
 
-`POST /api/plan` kiểm tra đầu vào, dùng điểm tham quan trong database để chọn điểm và tính giờ, chi phí, khoảng cách. Nếu đặt `AI_API_KEY`, server gọi endpoint Chat Completions tương thích OpenAI chỉ để viết **lý do lựa chọn**. LLM không quyết định giờ, giá, trạng thái hay khoảng cách. Nếu provider lỗi hoặc phản hồi sai dạng, thuật toán nội bộ tiếp tục trả lịch trình với `mode: "demo"`.
+## Demo công khai qua Cloudflare Quick Tunnel trên Windows
 
-```env
-AI_API_KEY=...
-AI_PROVIDER_URL=https://api.openai.com/v1/chat/completions
-AI_MODEL=gpt-4o-mini
+Chế độ này chạy `next build` + `next start` trên `127.0.0.1:3000` và dùng **database riêng** `data/truego-public-demo.sqlite`; không dùng Turso/Vercel hoặc `data/truego.sqlite`. Script chỉ bật SQLite production khi `TRUEGO_LOCAL_DEMO=1` trong tiến trình được quản lý, tạo khóa mã hóa riêng trong `.demo-runtime/evidence.key`, và không seed tài khoản admin mặc định. Cloudflared chạy độc lập sau khi terminal kết thúc.
+
+```powershell
+npm run demo:start    # build, khởi chạy và in URL HTTPS mới
+npm run demo:status   # kiểm tra cả localhost và URL công khai
+npm run demo:restart  # giữ SQLite, cấp URL mới
+npm run demo:stop     # chỉ dừng tiến trình demo; không xóa SQLite
 ```
 
-Secret chỉ được đọc ở route handler trên server. Bản demo hiện hỗ trợ Hà Nội và tối đa 7 ngày. Chi phí là ngân sách hoạt động tham quan, không gồm lưu trú, ăn uống hoặc vận chuyển.
+Cần Node.js, npm, dependencies đã cài và `cloudflared` (có thể cài bằng `winget install --id Cloudflare.cloudflared -e --accept-package-agreements --accept-source-agreements`). URL và PID hiện tại cũng được lưu ở `.demo-runtime/state.json` (Git bỏ qua). Nếu muốn tạo admin cho bản demo, dùng `DATABASE_PATH` trỏ **đúng database demo** và `npm run admin:bootstrap`; tự đặt mật khẩu mạnh, không chia sẻ tài khoản admin. Tài khoản du khách tự đăng ký trên website; chỉ dùng dữ liệu thử nghiệm, không nhập thông tin cá nhân hoặc hóa đơn thật.
 
-## API chính
+Máy Windows phải bật, có Internet và hai tiến trình Next.js/cloudflared còn chạy. Quick Tunnel có hostname tạm và **không đảm bảo uptime**; URL đổi sau khi restart. Một số DNS cục bộ có thể chưa phân giải hostname mới ngay; `demo:status` kiểm tra thêm qua DNS công khai của Cloudflare mà không đổi cấu hình Windows. Xem [tài liệu Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
 
-| Endpoint | Mục đích |
-| --- | --- |
-| `GET /api/destinations` | Danh sách kèm trạng thái/revision hiện tại |
-| `GET /api/destinations/:slug` | Chi tiết, thông báo, review |
-| `POST /api/plan` | Tạo lịch trình có kiểm tra ngân sách/giờ |
-| `PATCH /api/partner/destinations/:id` | Cập nhật trạng thái, giờ, mức đông, thông báo (development) |
-| `GET /api/partner/history?destinationId=:id` | Lịch sử cập nhật |
-| `POST /api/partner/reset` | Khôi phục dữ liệu demo (development) |
-| `POST /api/feedback` | Lưu phản hồi chưa xác minh |
+## Vercel và database
 
-Schema và migration: `migrations/001_init.sql`. Seed: `data/seed.json`, `scripts/seed.mjs`. Mô hình dữ liệu có Destination, StatusHistory, Announcement, CrowdForecast, Review, VerificationEvidence, Trip/Day/Activity, TravelPreference, NotificationEvent và PartnerOrganization. Trip trên MVP hiện lưu cục bộ; các bảng Trip và NotificationEvent chuẩn bị cho dịch vụ đồng bộ trong tương lai.
+Ứng dụng dùng Next.js App Router/Node.js Functions, không có `output: "export"`. Nếu chưa có Turso, Vercel hiển thị 29 địa điểm seed và planner trên thiết bị; các chức năng cần ghi database trả lỗi rõ ràng. Không nên trình diễn tài khoản/review/đối tác trên production khi chưa cấu hình Turso. Khi cập nhật một database đã tồn tại, việc bổ sung địa điểm seed chỉ chèn ID còn thiếu trong SQLite demo cục bộ; Turso production cần quy trình cập nhật dữ liệu riêng sau khi sao lưu và rà soát, không chạy lại `db:setup:remote`.
+
+Với **database Turso libSQL mới và rỗng** (chọn engine libSQL; ứng dụng dùng `@libsql/client`, chưa hỗ trợ engine Turso mới):
+
+1. Tạo database libSQL trong Turso Dashboard, hoặc chạy `turso db create vntruego` nếu đã cài Turso CLI (không thêm cờ `--tursodb`). Lấy URL từ Dashboard hoặc `turso db show vntruego`; tạo token bằng `turso db tokens create vntruego`. Không gửi token qua chat, không commit `.env.local`.
+2. Đặt `TURSO_DATABASE_URL` và `TURSO_AUTH_TOKEN` trong shell cục bộ. Chạy `npm run db:setup:remote` **một lần** để tạo schema 001 và seed; script từ chối database đã có bảng.
+3. Chạy `npm run db:migrate:remote` để thêm migrations 002–005. Với database có dữ liệu hiện hữu, sao lưu và chỉ chạy lệnh migration này sau khi rà soát schema; không chạy setup/seed.
+4. Đặt `ADMIN_EMAIL`, `ADMIN_PASSWORD` trong shell rồi chạy `npm run admin:bootstrap:remote`. Script không sửa tài khoản hiện hữu. Xóa biến mật khẩu khỏi shell sau đó.
+5. Trong Vercel Project Settings → Environment Variables đặt `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `EVIDENCE_ENCRYPTION_KEY` (64 hex). Dùng database riêng cho Preview. `AI_API_KEY`, `AI_PROVIDER_URL`, `AI_MODEL` là tùy chọn, chỉ ảnh hưởng phần diễn giải AI. Không thêm `NEXT_PUBLIC_` cho secret.
+6. Triển khai Next.js theo cấu hình framework mặc định; sau deploy kiểm tra trực tiếp đăng ký, review, kiểm duyệt, đối tác, lưu lịch trình, Google Maps và Google Translate. Trong thay đổi hiện tại **chưa push hoặc deploy** theo yêu cầu chủ dự án.
+
+Ví dụ nạp thông tin vào **phiên PowerShell hiện tại** trước bước 2–4 (token và mật khẩu được nhập ẩn, không ghi vào lịch sử lệnh):
+
+```powershell
+$env:TURSO_DATABASE_URL = Read-Host "Turso libSQL URL"
+$tursoSecret = Read-Host "Turso database token" -AsSecureString
+$env:TURSO_AUTH_TOKEN = [System.Net.NetworkCredential]::new("", $tursoSecret).Password
+Remove-Variable tursoSecret
+npm run db:setup:remote
+npm run db:migrate:remote
+$env:ADMIN_EMAIL = Read-Host "Email admin"
+$adminSecret = Read-Host "Mật khẩu admin tối thiểu 16 ký tự" -AsSecureString
+$env:ADMIN_PASSWORD = [System.Net.NetworkCredential]::new("", $adminSecret).Password
+Remove-Variable adminSecret
+npm run admin:bootstrap:remote
+Remove-Item Env:ADMIN_PASSWORD, Env:TURSO_AUTH_TOKEN
+```
+
+Chỉ chạy khối trên với database **mới, rỗng và đúng URL**. Nếu đã có dữ liệu, dừng trước `db:setup:remote`, sao lưu và kiểm tra schema trước khi migration.
+
+Tạo khóa AES bằng PowerShell và Node: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`; lưu kết quả trực tiếp trong secret manager của Vercel, không trong Git. Cần lưu giữ khóa an toàn để đọc bằng chứng đã mã hóa.
 
 ## Kiểm thử
 
-```bash
+```powershell
 npm run typecheck
+npm run lint
 npm test
 npm run build
-npx playwright install chromium
 npm run test:e2e
 ```
 
-Vitest kiểm tra tạo lịch trình, giờ mở cửa, ngân sách, thay/khóa/đổi thứ tự, tính lại, phát hiện cập nhật, chống thông báo trùng, phương án thay thế, đổi giờ/thứ tự, chấp nhận/từ chối và sao lưu/khôi phục. Playwright kiểm tra đóng cửa → thay điểm, đổi giờ mở cửa → điều chỉnh giờ, lưu sở thích, chống thêm điểm trùng và màn hình 320×640, 375×812, 390×844, 430×932, 1440×900.
-
-Kết quả kiểm thử trước commit ngày 17/10/2026: `npm run build`, TypeScript strict, **18/18** unit test và **5/5** E2E test đạt; `npm audit` báo **0 lỗ hổng**. E2E kiểm tra các trang chính ở 320×640, 375×812, 390×844, 430×932 và 1440×900 không tràn ngang. Bản production thử cục bộ trả 24 địa điểm, trang chi tiết và lịch trình HTTP 200; khi chưa kết nối database, phản hồi HTTP 503 và ghi dashboard HTTP 403. Chế độ remote được thử với database libSQL dùng một lần trên máy cục bộ: phản hồi HTTP 201 và dữ liệu còn sau khi dừng server. Kết nối Turso qua mạng và deployment Vercel cần kiểm chứng riêng sau khi cấp tài khoản/biến môi trường.
-
-## Triển khai trên Vercel
-
-Dự án dùng Next.js App Router và Function của Vercel; không dùng static export, `basePath` của GitHub Pages hoặc CNAME cũ. Import repository GitHub vào Vercel, chọn **Next.js**, build bằng `npm run build`, output theo mặc định của framework và Node.js 24.x. Sau khi kết nối repository, mỗi lần push lên `main` sẽ tạo deployment theo cấu hình dự án Vercel. Vercel cấp URL HTTPS dạng `*.vercel.app`; tên miền riêng cần cấu hình DNS riêng.
-
-Filesystem của Vercel Function không phù hợp để ghi SQLite cục bộ lâu dài. Production có hai chế độ:
-
-1. **Không có `TURSO_DATABASE_URL` và `TURSO_AUTH_TOKEN`:** API đọc danh sách/chi tiết từ 24 địa điểm seed đóng gói cùng mã nguồn. Tìm kiếm, bản đồ, lập và lưu lịch trình trong trình duyệt tiếp tục hoạt động. Phản hồi địa điểm trả 503; lịch sử cập nhật trống; dashboard chỉ đọc.
-2. **Có cả hai biến:** ứng dụng đọc địa điểm và lưu phản hồi vào Turso/libSQL. Dữ liệu không được migrate hay seed tự động trong request. Trước khi bật hai biến trên Vercel, tạo **database Turso mới và rỗng**, rồi chạy `npm run db:setup:remote` đúng một lần với hai biến đó trong shell cục bộ. Script từ chối database đã có bảng và không thay đổi database hiện hữu. Không dùng script này trên database production đang chứa dữ liệu.
-
-Ví dụ PowerShell, thay giá trị bằng URL và token của database **mới**; không đưa token vào Git hoặc tài liệu:
-
-```powershell
-$env:TURSO_DATABASE_URL = "libsql://<database-host>"
-$env:TURSO_AUTH_TOKEN = "<database-token>"
-npm run db:setup:remote
-```
-
-Sau đó đặt `TURSO_DATABASE_URL` và `TURSO_AUTH_TOKEN` trong Vercel Project Settings → Environment Variables cho Production và Preview nếu muốn preview dùng cùng database. Nên dùng database riêng cho Preview để tránh trộn dữ liệu. Đặt `AI_API_KEY` trên Vercel nếu muốn bật phần giải thích do LLM sinh; tùy chọn `AI_PROVIDER_URL`, `AI_MODEL`. Không đặt secret với tiền tố `NEXT_PUBLIC_`. Redeploy sau khi đổi biến môi trường. Nếu chỉ triển khai chế độ seed, không cần cấu hình Turso và planner sẽ dùng thuật toán demo khi không có AI key.
-
-Lịch trình và sở thích hiện lưu trong `localStorage` của từng trình duyệt, không đồng bộ qua thiết bị. Production không cho ghi trạng thái địa điểm hay reset demo; cần đăng nhập, phân quyền và bảo vệ API trước khi mở quyền ghi. Trước khi vận hành với lượng truy cập thực, cần rate limit endpoint phản hồi, giám sát/backup và nguồn dữ liệu địa điểm đã xác minh. Bản đồ OpenStreetMap và ảnh cần kết nối mạng.
-
-## Những gì đã hoàn thành
-
-Khám phá, tìm kiếm/lọc, chi tiết địa điểm, bản đồ toàn màn hình, form lịch trình, thuật toán fallback, timeline có chỉnh sửa và tính lại, lưu/xuất/nhập JSON, sở thích lưu cục bộ, dashboard demo, API trạng thái có lịch sử, polling cảnh báo và chấp nhận/từ chối phương án thay thế hoặc đổi giờ/thứ tự khả thi, giao diện Việt/Anh, PWA cơ bản, responsive và bộ test.
+E2E cần Chromium Playwright (`npx playwright install chromium`). Xem [FEATURES.md](docs/FEATURES.md), [DEMO_GUIDE.md](docs/DEMO_GUIDE.md), [ARCHITECTURE.md](docs/ARCHITECTURE.md), [LIMITATIONS.md](docs/LIMITATIONS.md).

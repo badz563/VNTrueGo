@@ -35,7 +35,7 @@ export default function MapView({ points, height = 300 }: { points: Destination[
   useEffect(() => { const timer=setTimeout(() => mapRef.current?.invalidateSize(),100); return () => clearTimeout(timer); },[full]);
   if (!points.length) return <div className="map-empty">Chưa có địa điểm để hiển thị bản đồ.</div>;
   return <div className={full ? "map-wrap map-full" : "map-wrap"} style={{height:full ? undefined : height}}>
-    <div ref={holder} className="map-canvas" aria-label="Bản đồ các điểm tham quan" />
+    <div ref={holder} className="map-canvas" aria-label="Bản đồ các địa điểm" />
     <button className="map-expand icon-btn" onClick={() => setFull(!full)} aria-label={full ? "Thu nhỏ bản đồ" : "Xem bản đồ toàn màn hình"}>{full ? <X size={20}/> : <Expand size={20}/>}</button>
     {tileFailed && <div className="map-fallback" role="status">Không tải được nền bản đồ trên mạng này. <a href={`https://www.google.com/maps/search/?api=1&query=${points[0].lat},${points[0].lng}`} target="_blank" rel="noreferrer">Mở vị trí trên Google Maps</a>.</div>}
     {points.length > 1 && <div className="map-note">Đường nối minh họa · thời gian di chuyển ước tính</div>}
