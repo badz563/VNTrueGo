@@ -4,6 +4,7 @@ import { createClient as createWebClient } from "@libsql/client/web";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import seedRows from "../../data/seed.json";
+import photoCredits from "../../data/photo-credits.json";
 import type { Crowd, Destination, Status } from "./types";
 
 type Row = Record<string, unknown>;
@@ -11,6 +12,13 @@ function plainRows<T>(rows:Row[]):T[]{return JSON.parse(JSON.stringify(rows)) as
 const root = process.cwd();
 let connection: Promise<Client> | null = null;
 type SeedRow = (typeof seedRows)[number];
+const seedById = new Map(seedRows.map(row => [row.id, row]));
+const photoById = new Map(photoCredits.map(credit => [credit.id, credit]));
+const oldDemoImages = new Set(["/images/hero.webp", "/images/temple.webp", "/images/bridge.webp", "/images/museum.webp", "/images/hanoi-food.webp", "/images/hanoi-hotel.webp"]);
+function photoCredit(id: string) {
+  const credit = photoById.get(id);
+  return credit && { creator: credit.creator, license: credit.license, sourceUrl: credit.sourceUrl, licenseUrl: credit.licenseUrl, isActualPlace: credit.photoRole === "actual place" };
+}
 function seedDetails(row: SeedRow) {
   const extra = row as SeedRow & { description?: string; descriptionEn?: string; sourceUrl?: string };
   return {
@@ -77,7 +85,7 @@ function seedDestination(row: (typeof seedRows)[number]): Destination {
     description: seedDetails(row).description,
     descriptionEn: seedDetails(row).descriptionEn,
     sourceUrl: seedDetails(row).sourceUrl,
-    lat: row.lat, lng: row.lng, address: row.address, image: row.image,
+    lat: row.lat, lng: row.lng, address: row.address, image: row.image, photoCredit: photoCredit(row.id),
     tags: row.tags, duration: row.duration, price: row.price,
     opening: { open: "08:00", close: "17:00" }, closedDays: [],
     status: "unknown", statusRev: 1, statusUpdatedAt: null, statusSource: "demo",
@@ -86,13 +94,18 @@ function seedDestination(row: (typeof seedRows)[number]): Destination {
 }
 
 export function mapDestination(row: Row): Destination {
+  const id = String(row.id);
+  const seeded = seedById.get(id);
+  const storedImage = String(row.image);
   return {
-    id: String(row.id), slug: String(row.slug), name: String(row.name),
+    id, slug: String(row.slug), name: String(row.name),
     nameEn: row.name_en ? String(row.name_en) : null,
     category: String(row.category), description: String(row.description),
     descriptionEn: row.description_en ? String(row.description_en) : null,
     lat: Number(row.lat), lng: Number(row.lng), address: String(row.address),
-    image: String(row.image), tags: JSON.parse(String(row.tags_json)),
+    image: seeded && oldDemoImages.has(storedImage) ? seeded.image : storedImage,
+    photoCredit: seeded && (oldDemoImages.has(storedImage) || storedImage === seeded.image) ? photoCredit(id) : undefined,
+    tags: JSON.parse(String(row.tags_json)),
     duration: Number(row.duration), price: Number(row.price),
     opening: JSON.parse(String(row.opening_json)), closedDays: JSON.parse(String(row.closed_days_json)),
     status: row.status as Status, statusRev: Number(row.status_rev),
@@ -100,7 +113,7 @@ export function mapDestination(row: Row): Destination {
     statusSource: String(row.status_source), crowd: row.crowd as Crowd,
     crowdUpdatedAt: row.crowd_updated_at ? String(row.crowd_updated_at) : null,
     updatedAt: String(row.updated_at),
-    sourceUrl: seedRows.find(item => item.id === String(row.id)) ? seedDetails(seedRows.find(item => item.id === String(row.id))!).sourceUrl : undefined,
+    sourceUrl: seeded ? seedDetails(seeded).sourceUrl : undefined,
     ratingCount: row.rating_count == null ? 0 : Number(row.rating_count),
     rating: row.avg_tenths == null ? null : Number(row.avg_tenths)/10
   };

@@ -2,7 +2,7 @@
 
 - Chưa kết nối Turso production trong phiên làm việc này; không xác nhận tính năng database trên URL Vercel đang chạy. Chưa push/deploy thay đổi này.
 - Bản Cloudflare Quick Tunnel là demo tạm thời trên máy Windows, phụ thuộc điện/Internet/tiến trình của máy và URL đổi sau restart; không có uptime hoặc backup tự động. DNS cục bộ có thể phân giải URL mới chậm hơn DNS công khai.
-- 29 địa điểm Hà Nội, gồm 5 điểm ăn uống/lưu trú có nguồn tham chiếu cho tên và địa chỉ; giá/giờ/tọa độ ghim/ảnh vẫn minh họa. Chưa có dữ liệu thời tiết, giờ theo từng thứ/ngày ngoại lệ, giá phòng hay tình trạng phòng. Khách sạn chỉ để tra cứu và lưu yêu thích, chưa được xếp tự động vào lịch trình hoặc đặt phòng.
+- 29 địa điểm Hà Nội, gồm 5 điểm ăn uống/lưu trú có nguồn tham chiếu cho tên và địa chỉ; giá/giờ/tọa độ ghim vẫn minh họa. Ảnh chụp thật có ghi công và giấy phép tại `/photo-credits`; riêng ảnh phở và pizza minh họa món ăn, không chụp tại cơ sở. Chưa có dữ liệu thời tiết, giờ theo từng thứ/ngày ngoại lệ, giá phòng hay tình trạng phòng. Khách sạn chỉ để tra cứu và lưu yêu thích, chưa được xếp tự động vào lịch trình hoặc đặt phòng.
 - Review dùng bằng chứng văn bản mã hóa; chưa có upload hóa đơn/check-in ảnh vào kho riêng, chính sách xóa định kỳ, quy trình xử lý tranh chấp hoặc xác thực độc lập. Admin phải kiểm tra thủ công; không cam kết loại bỏ review giả.
 - Chưa có giấy phép/chứng nhận, claim địa điểm, partner organization nhiều nhân viên, quyền chi tiết cho Staff, phản hồi review của đối tác, báo cáo vi phạm và quản lý quyền riêng tư toàn diện. Hồ sơ mới hỗ trợ tên hiển thị và đổi mật khẩu.
 - Sự kiện/ưu đãi hỗ trợ tạo và hủy; chưa có form sửa, ảnh hoặc upload. Mùa vụ lưu ghi chú nguồn nhưng chưa có chu kỳ hiệu lực/cảnh báo cũ tự động.

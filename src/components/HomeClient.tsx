@@ -22,7 +22,7 @@ export default function HomeClient(){
   const suggested=preferredTags.length?destinations.filter(d=>d.status!=="closed"&&d.status!=="overloaded"&&preferredTags.some(tag=>d.tags.includes(tag))).slice(0,4):[];
   return <div className="home-page">
     <section className="hero container">
-      <Image src="/images/hero.webp" alt="Ảnh minh họa Hồ Hoàn Kiếm lúc bình minh" fill loading="eager" fetchPriority="high" sizes="(max-width: 800px) 100vw, 1200px" className="hero-image"/>
+      <Image src="/images/hero.webp" alt="Ảnh chụp Tháp Rùa trên Hồ Hoàn Kiếm" fill loading="eager" fetchPriority="high" sizes="(max-width: 800px) 100vw, 1200px" className="hero-image"/>
       <div className="hero-shade"/>
       <div className="hero-content">
         <div className="eyebrow"><span className="eyebrow-line"/>{t(lang,"heroEyebrow")}</div>
@@ -30,7 +30,7 @@ export default function HomeClient(){
         <p>{t(lang,"heroBody")}</p>
         <Link href="/trip" className="button button-light"><Sparkles size={18}/>{t(lang,"create")}<ArrowRight size={18}/></Link>
       </div>
-      <span className="hero-caption">{lang==="vi"?"Hà Nội · Ảnh minh họa tạo bởi AI":"Hanoi · AI-generated illustration"}</span>
+      <span className="hero-caption">{lang==="vi"?"Hồ Hoàn Kiếm · Ảnh chụp thật":"Hoan Kiem Lake · Real photo"} · <Link href="/photo-credits#d02">{lang==="vi"?"Nguồn ảnh":"Photo credit"}</Link></span>
     </section>
     <div className="container search-section">
       <div className="search-box"><Search size={21}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t(lang,"search")} aria-label={t(lang,"search")}/>
@@ -53,7 +53,7 @@ export default function HomeClient(){
       <div className="category-scroll" role="group" aria-label="Lọc theo loại hình">{categories.map(item=><button key={item} className={category===item?"category-pill active":"category-pill"} onClick={()=>setCategory(item)}>{item==="Tất cả"?t(lang,"all"):categoryText(lang,item)}</button>)}</div>
       {loading?<div className="card-grid">{[1,2,3,4].map(i=><div key={i} className="skeleton-card skeleton"/>)}</div>:filtered.length?<><div className="card-grid">{filtered.slice(0,visibleCount).map(d=><DestinationCard key={d.id} destination={d}/>)}</div>{filtered.length>visibleCount&&<button className="button button-outline load-more" onClick={()=>setVisibleCount(count=>count+12)}>Xem thêm {filtered.length-visibleCount} địa điểm</button>}</>:<div className="empty-state"><Search size={28}/><p>{t(lang,"noResults")}</p><button onClick={()=>{setQuery("");setCategory("Tất cả");setInterest("");setMaxPrice(0);}}>{lang==="vi"?"Xóa bộ lọc":"Clear filters"}</button></div>}
     </section>
-    <footer className="container site-footer"><Image src="/brand-logo.png" alt="VietNam TrueGo - biểu tượng du lịch sinh thái Việt Nam" width={140} height={140} className="footer-logo"/><span>{lang==="vi"?"Bản demo · Kiểm tra thông tin chính thức trước khi đi.":"Demo · Verify official details before visiting."}</span><Link href="/partner-demo">Partner demo <ArrowRight size={14}/></Link></footer>
+    <footer className="container site-footer"><Image src="/brand-logo.png" alt="VietNam TrueGo - biểu tượng du lịch sinh thái Việt Nam" width={140} height={140} className="footer-logo"/><span>{lang==="vi"?"Bản demo · Kiểm tra thông tin chính thức trước khi đi.":"Demo · Verify official details before visiting."}</span><Link href="/photo-credits">{lang==="vi"?"Nguồn & giấy phép ảnh":"Photo credits"}</Link><Link href="/partner-demo">Partner demo <ArrowRight size={14}/></Link></footer>
   </div>;
 }
 

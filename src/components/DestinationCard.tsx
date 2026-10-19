@@ -7,6 +7,7 @@ import type { Destination } from "@/lib/types";
 import { useApp } from "./AppProvider";
 import { categoryText, statusText, t } from "@/lib/i18n";
 import { RatingDisplay } from "./Rating";
+import { photoAlt } from "@/lib/photo";
 export default function DestinationCard({destination,compact=false,eager=false}:{destination:Destination;compact?:boolean;eager?:boolean}) {
   const {lang,addToTrip,checkedAt}=useApp();
   const [addResult,setAddResult]=useState<"added"|"exists"|"unavailable"|null>(null);
@@ -14,7 +15,7 @@ export default function DestinationCard({destination,compact=false,eager=false}:
   function add(){setAddResult(addToTrip(destination));setTimeout(()=>setAddResult(null),2200);}
   return <article className={compact?"destination-card compact":"destination-card"}>
     <Link href={`/destinations/${destination.slug}`} className="card-image-link" aria-label={`${t(lang,"detail")}: ${destination.name}`}>
-      <Image src={destination.image} alt={destination.category==="Khách sạn"?"Ảnh minh họa không gian khách sạn":destination.sourceUrl?"Ảnh minh họa ẩm thực Hà Nội":`Ảnh minh họa ${destination.name}`} fill loading={eager?"eager":"lazy"} sizes="(max-width: 650px) 85vw, (max-width: 1100px) 45vw, 310px" className="card-image" />
+      <Image src={destination.image} alt={photoAlt(destination, lang)} fill loading={eager?"eager":"lazy"} sizes="(max-width: 650px) 85vw, (max-width: 1100px) 45vw, 310px" className="card-image" />
       <span className="image-label">{t(lang,"demo")}</span>
     </Link>
     <div className="card-content">

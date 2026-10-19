@@ -1,6 +1,6 @@
 # VietNam TrueGo
 
-Ứng dụng du lịch mobile-first cho Hà Nội: khám phá địa điểm, lập lịch trình, Google Maps URLs, Google Translate, tài khoản, đánh giá chờ xác minh và cổng đối tác/admin. Logo do chủ dự án cung cấp. 29 địa điểm seed gồm 24 điểm tham quan và 5 điểm ăn uống/lưu trú. Các địa điểm mới có liên kết nguồn cho tên và địa chỉ; giờ, chi phí, tọa độ ghim và ảnh trong demo vẫn là **dữ liệu minh họa/chưa xác minh**.
+Ứng dụng du lịch mobile-first cho Hà Nội: khám phá địa điểm, lập lịch trình, Google Maps URLs, Google Translate, tài khoản, đánh giá chờ xác minh và cổng đối tác/admin. Logo do chủ dự án cung cấp. 29 địa điểm seed gồm 24 điểm tham quan và 5 điểm ăn uống/lưu trú. Ảnh AI đã được thay bằng ảnh chụp thật; nguồn, tác giả và giấy phép được ghi ở `/photo-credits` và `data/photo-credits.json`. Ảnh phở và pizza minh họa món ăn, không phải ảnh chụp tại hai cơ sở. Giờ, chi phí và tọa độ ghim vẫn là **dữ liệu minh họa/chưa xác minh**.
 
 ## Chạy cục bộ
 

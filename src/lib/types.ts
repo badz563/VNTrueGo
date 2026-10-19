@@ -4,7 +4,7 @@ export type Language = "vi" | "en";
 export type Destination = {
   id: string; slug: string; name: string; nameEn: string | null; category: string;
   description: string; descriptionEn: string | null; sourceUrl?: string; lat: number; lng: number;
-  address: string; image: string; tags: string[]; duration: number; price: number;
+  address: string; image: string; photoCredit?: { creator: string; license: string; sourceUrl: string; licenseUrl: string; isActualPlace: boolean }; tags: string[]; duration: number; price: number;
   opening: { open: string; close: string }; closedDays: number[];
   status: Status; statusRev: number; statusUpdatedAt: string | null;
   statusSource: string; crowd: Crowd; crowdUpdatedAt: string | null;

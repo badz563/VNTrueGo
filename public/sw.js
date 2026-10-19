@@ -1,5 +1,5 @@
-const STATIC_CACHE="truego-static-v2";
-const PAGE_CACHE="truego-pages-v2";
+const STATIC_CACHE="truego-static-v3";
+const PAGE_CACHE="truego-pages-v3";
 const STATIC=["/","/offline.html","/brand-logo.png","/images/hero.webp","/images/temple.webp","/images/bridge.webp","/images/museum.webp"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(STATIC_CACHE).then(cache=>cache.addAll(STATIC)));self.skipWaiting();});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>![STATIC_CACHE,PAGE_CACHE].includes(key)).map(key=>caches.delete(key)))));self.clients.claim();});
