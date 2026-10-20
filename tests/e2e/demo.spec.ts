@@ -1,10 +1,31 @@
 import { test, expect } from "@playwright/test";
+test("personalized trip offers a private status simulation and applicable replacement",async({page,request})=>{
+  await page.goto("/trip");
+  await page.getByRole("button",{name:"Ẩm thực & cà phê"}).click();
+  await expect(page.getByRole("button",{name:"ẩm thực",exact:true})).toHaveClass(/selected/);
+  await page.getByRole("button",{name:"Tạo lịch trình thông minh"}).click();
+  await expect(page.getByText("Đã tạo và lưu lịch trình")).toBeVisible();
+  const initial=await page.evaluate(()=>JSON.parse(localStorage.getItem("truego:v1")||"{}").trips[0]);
+  expect(initial.days.flatMap((day:{activities:{reason:string}[]})=>day.activities).some((activity:{reason:string})=>activity.reason.includes("ẩm thực"))).toBe(true);
+  await page.getByRole("button",{name:"Mô phỏng điểm đóng cửa"}).click();
+  await expect(page.getByText("Đã tạo tình huống mô phỏng")).toBeVisible();
+  const simulation=await page.evaluate(()=>JSON.parse(localStorage.getItem("truego:v1")||"{}").simulations);
+  expect(simulation).toHaveLength(1);
+  const publicData=(await (await request.get("/api/destinations")).json()).destinations;
+  expect(publicData.find((item:{id:string})=>item.id===simulation[0].destinationId).statusSource).not.toBe("visitor-simulation");
+  await page.getByRole("link",{name:/Xem cảnh báo/}).click();
+  await expect(page.getByText("Nguồn: mô phỏng trên thiết bị, không phải thực tế")).toBeVisible();
+  await page.getByRole("button",{name:"Vì sao nên chọn điểm thay thế?"}).click();
+  await expect(page.getByText("Gợi ý theo thuật toán demo")).toBeVisible();
+  await page.locator(".alternative-row button").first().click();
+  await expect(page.getByText("Đã điều chỉnh")).toBeVisible();
+});
 test("visitor trip reacts to partner closure and accepts a replacement",async({browser,request})=>{
   await request.post("/api/partner/reset",{headers:{Origin:"http://127.0.0.1:3101"}});
   const context=await browser.newContext({viewport:{width:390,height:844}});
   const visitor=await context.newPage();
   await visitor.goto("/trip");
-  await visitor.getByRole("button",{name:"Tạo lịch trình với AI"}).click();
+  await visitor.getByRole("button",{name:"Tạo lịch trình thông minh"}).click();
   await expect(visitor.getByText("Đã tạo và lưu lịch trình")).toBeVisible();
   const original=await visitor.evaluate(()=>JSON.parse(localStorage.getItem("truego:v1")||"{}").trips[0]);
   const first=original.days[0].activities[0];
@@ -31,7 +52,7 @@ test("changed opening hours offer a time adjustment that updates the saved trip"
   const visitor=await context.newPage();
   await visitor.goto("/trip");
   await visitor.getByRole("button",{name:/Thư giãn/}).click();
-  await visitor.getByRole("button",{name:"Tạo lịch trình với AI"}).click();
+  await visitor.getByRole("button",{name:"Tạo lịch trình thông minh"}).click();
   await expect(visitor.getByText("Đã tạo và lưu lịch trình")).toBeVisible();
   const original=await visitor.evaluate(()=>JSON.parse(localStorage.getItem("truego:v1")||"{}").trips[0]);
   const first=original.days[0].activities[0];

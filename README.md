@@ -32,8 +32,8 @@ Trong development, khóa AES cho bằng chứng review được tạo tự độ
 
 3. Đăng nhập admin tại `/account`, vào `/admin` để duyệt review hoặc cấp quyền Partner Manager/Staff cho tài khoản đã đăng ký và địa điểm cụ thể.
 4. Đối tác đăng nhập, vào `/partner` để cập nhật trạng thái, giờ tham khảo, thông báo, đăng sự kiện, ưu đãi hoặc thông tin mùa vụ. Staff không được sửa mô tả; ưu đãi/mùa vụ yêu cầu Manager hoặc Admin. API kiểm tra quyền ở server.
-5. Du khách vào `/destinations/[slug]`, gửi đánh giá với bằng chứng văn bản riêng tư. Review chỉ được công khai và tính điểm sau khi admin duyệt. Điểm 0,0–5,0 theo bước 0,1, lưu dưới dạng số phần mười.
-6. Vào `/trip` để tạo, khóa/thay/đổi thứ tự và lưu lịch trình trên thiết bị. Vào `/profile` để sao lưu lịch trình lên tài khoản hoặc mở lại; yêu thích địa điểm cũng được lưu theo tài khoản.
+5. Du khách vào `/destinations/[slug]`, bấm **Mô phỏng thanh toán** để tạo biên nhận gắn với tài khoản và địa điểm, sau đó gửi minh chứng văn bản thử nghiệm cùng đánh giá. API bắt buộc có biên nhận của đúng tài khoản/địa điểm. Không thu tiền thật; biên nhận không chứng minh đã dùng dịch vụ. Review chỉ công khai và tính điểm sau khi admin duyệt. Điểm 0,0–5,0 theo bước 0,1, lưu dưới dạng số phần mười.
+6. Vào `/trip` để chọn nhanh phong cách, tạo, khóa/thay/đổi thứ tự và lưu lịch trình trên thiết bị. Bấm **Mô phỏng điểm đóng cửa**, mở `/alerts`, xem gợi ý thay thế rồi chấp nhận; tình huống này chỉ lưu trong trình duyệt, không sửa trạng thái chung. Nút **Vì sao nên chọn điểm thay thế?** dùng AI để diễn giải khi có key, còn không dùng lý do theo thuật toán demo. Vào `/profile` để sao lưu lịch trình lên tài khoản hoặc mở lại; yêu thích địa điểm cũng được lưu theo tài khoản.
 7. Mở vị trí hoặc tuyến theo ngày bằng Google Maps URLs. `/translate` mở nội dung sang Google Translate theo hai chiều Việt–Anh.
 
 `/partner-demo` vẫn là sandbox **chỉ cho development**. API demo công khai trong máy cục bộ, nhưng tắt quyền ghi trên production. Nút reset demo chỉ đưa trạng thái/giờ/mô tả địa điểm seed và lịch sử trạng thái cục bộ về ban đầu; không xóa tài khoản, review hay lịch trình.
@@ -61,10 +61,10 @@ Với **database Turso libSQL mới và rỗng** (chọn engine libSQL; ứng d�
 
 1. Tạo database libSQL trong Turso Dashboard, hoặc chạy `turso db create vntruego` nếu đã cài Turso CLI (không thêm cờ `--tursodb`). Lấy URL từ Dashboard hoặc `turso db show vntruego`; tạo token bằng `turso db tokens create vntruego`. Không gửi token qua chat, không commit `.env.local`.
 2. Đặt `TURSO_DATABASE_URL` và `TURSO_AUTH_TOKEN` trong shell cục bộ. Chạy `npm run db:setup:remote` **một lần** để tạo schema 001 và seed; script từ chối database đã có bảng.
-3. Chạy `npm run db:migrate:remote` để thêm migrations 002–005. Với database có dữ liệu hiện hữu, sao lưu và chỉ chạy lệnh migration này sau khi rà soát schema; không chạy setup/seed.
+3. Chạy `npm run db:migrate:remote` để thêm migrations 002–006, bao gồm biên nhận thanh toán mô phỏng. Với database có dữ liệu hiện hữu, sao lưu và chỉ chạy lệnh migration này sau khi rà soát schema; không chạy setup/seed.
 4. Đặt `ADMIN_EMAIL`, `ADMIN_PASSWORD` trong shell rồi chạy `npm run admin:bootstrap:remote`. Script không sửa tài khoản hiện hữu. Xóa biến mật khẩu khỏi shell sau đó.
-5. Trong Vercel Project Settings → Environment Variables đặt `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `EVIDENCE_ENCRYPTION_KEY` (64 hex). Dùng database riêng cho Preview. `AI_API_KEY`, `AI_PROVIDER_URL`, `AI_MODEL` là tùy chọn, chỉ ảnh hưởng phần diễn giải AI. Không thêm `NEXT_PUBLIC_` cho secret.
-6. Triển khai Next.js theo cấu hình framework mặc định; sau deploy kiểm tra trực tiếp đăng ký, review, kiểm duyệt, đối tác, lưu lịch trình, Google Maps và Google Translate. Trong thay đổi hiện tại **chưa push hoặc deploy** theo yêu cầu chủ dự án.
+5. Trong Vercel Project Settings → Environment Variables đặt `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `EVIDENCE_ENCRYPTION_KEY` (64 hex). Dùng database riêng cho Preview. `AI_API_KEY`, `AI_PROVIDER_URL`, `AI_MODEL` là tùy chọn, chỉ ảnh hưởng phần diễn giải AI trong lịch trình/cảnh báo. Không thêm `NEXT_PUBLIC_` cho secret.
+6. Triển khai Next.js theo cấu hình framework mặc định; sau deploy kiểm tra trực tiếp đăng ký, biên nhận demo, review, kiểm duyệt, đối tác, lưu lịch trình, cảnh báo, Google Maps và Google Translate.
 
 Ví dụ nạp thông tin vào **phiên PowerShell hiện tại** trước bước 2–4 (token và mật khẩu được nhập ẩn, không ghi vào lịch sử lệnh):
 

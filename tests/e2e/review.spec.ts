@@ -10,6 +10,15 @@ test("rating stars and slider save a pending fractional review",async({page,requ
   await page.getByRole("button",{name:"Tạo tài khoản"}).click();
   await expect(page.getByText(`Xin chào, Traveler Test`)).toBeVisible();
   await page.goto("/destinations/van-mieu-quoc-tu-giam");
+  const destination=(await (await request.get("/api/destinations/van-mieu-quoc-tu-giam")).json()).destination;
+  const rejected=await page.request.post("/api/reviews",{headers:{Origin:"http://127.0.0.1:3101"},data:{destinationId:destination.id,purchaseId:"TG-DEMO-invalid",rating:4,body:"Đánh giá kiểm tra thiếu thanh toán mô phỏng.",experiencedOn:"2026-10-18",evidenceKind:"checkin",evidence:"demo-evidence"}});
+  expect(rejected.status()).toBe(403);
+  await page.getByRole("button",{name:"Mô phỏng thanh toán"}).click();
+  await expect(page.getByText(/Biên nhận TG-DEMO-/)).toBeVisible();
+  const purchase=(await (await page.request.get(`/api/demo/purchases?destinationId=${destination.id}`)).json()).purchase;
+  expect(purchase.id).toMatch(/^TG-DEMO-/);
+  const repeated=await page.request.post("/api/demo/purchases",{headers:{Origin:"http://127.0.0.1:3101"},data:{destinationId:destination.id}});
+  expect((await repeated.json()).purchase.id).toBe(purchase.id);
   const form=page.locator("#review-form");
   await expect(form.getByText("Đánh giá của bạn: 0.0/5")).toBeVisible();
   await form.getByRole("button",{name:"4 sao"}).click();
@@ -22,7 +31,7 @@ test("rating stars and slider save a pending fractional review",async({page,requ
   await form.getByLabel("Ngày trải nghiệm").fill("2026-10-18");
   await form.getByLabel("Thông tin bằng chứng riêng tư").fill(`checkin-test-${Date.now()}`);
   await form.getByRole("button",{name:"Gửi chờ duyệt"}).click();
-  await expect(form.getByText("Đã lưu đánh giá ở trạng thái chờ duyệt.")).toBeVisible();
+  await expect(page.getByText("Đã lưu đánh giá ở trạng thái chờ duyệt.")).toBeVisible();
   const mine=await (await page.request.get("/api/reviews/mine")).json();
   expect(mine.reviews[0].ratingTenths).toBe(42);
   expect(mine.reviews[0].status).toBe("pending");

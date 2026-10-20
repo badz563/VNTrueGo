@@ -27,7 +27,7 @@ test("itinerary map renders map tiles",async({page})=>{
   const loadedTiles:string[]=[];
   page.on("response",response=>{if(response.ok()&&response.url().includes("tiles.openfreemap.org/planet/"))loadedTiles.push(response.url());});
   await page.goto("/trip");
-  await page.getByRole("button",{name:"Tạo lịch trình với AI"}).click();
+  await page.getByRole("button",{name:"Tạo lịch trình thông minh"}).click();
   const map=page.locator(".map-wrap");
   await expect(map).toBeVisible();
   await expect(map.locator(".maplibregl-canvas")).toBeVisible();

@@ -77,6 +77,9 @@ describe("planner constraints and edits",()=>{
     expect(updatedDay.activities[1].travelMinutes).toBeGreaterThan(0);
     const optimized=optimizeTrip(moved,destinations);
     expect(optimized.days.flatMap(d=>d.activities)).toHaveLength(trip.days.flatMap(d=>d.activities).length);
+    expect(optimized.days.flatMap(d=>d.activities).reduce((total,a)=>total+a.travelMinutes,0))
+      .toBeLessThanOrEqual(moved.days.flatMap(d=>d.activities).reduce((total,a)=>total+a.travelMinutes,0));
+    expect(optimized.days.every(day=>day.activities.every(activity=>isOpenAt(destinations.find(d=>d.id===activity.destinationId)!,day.date,Number(activity.start.slice(0,2))*60+Number(activity.start.slice(3)),activity.duration)))).toBe(true);
   });
   it("estimates longer travel for farther destinations",()=>{
     expect(travelMinutes(base,destinations[3],"walk")).toBeGreaterThan(travelMinutes(base,destinations[1],"walk"));
@@ -155,11 +158,11 @@ describe("local trip backup",()=>{
     const trip=create();const backup=exportBackup([trip]);
     expect(importBackup(backup)).toEqual([trip]);
     const stored={trips:[trip],activeId:trip.id,alerts:[] as Alert[],lang:"vi" as const,preferences:["lịch sử"]};
-    expect(parseStored(JSON.stringify(stored))).toEqual(stored);
+    expect(parseStored(JSON.stringify(stored))).toEqual({...stored,simulations:[]});
     expect(parseStored(JSON.stringify({...stored,preferences:undefined})).preferences).toEqual([]);
   });
   it("rejects malformed imported trips",()=>{
     expect(()=>importBackup('{"version":1,"trips":[{"id":"bad"}]}')).toThrow();
-    expect(parseStored("{")).toEqual({trips:[],activeId:null,alerts:[],lang:"vi",preferences:[]});
+    expect(parseStored("{")).toEqual({trips:[],activeId:null,alerts:[],lang:"vi",preferences:[],simulations:[]});
   });
 });

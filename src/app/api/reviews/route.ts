@@ -6,7 +6,7 @@ import { sealEvidence } from "@/lib/evidence";
 import { ratingSchema, ratingToTenths } from "@/lib/rating";
 import { rateLimit } from "@/lib/rateLimit";
 export const runtime="nodejs";
-const schema=z.object({destinationId:z.string().min(1),rating:ratingSchema,body:z.string().trim().min(20).max(1500),experiencedOn:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),evidenceKind:z.enum(["booking","receipt","checkin"]),evidence:z.string().trim().min(8).max(500)});
+const schema=z.object({destinationId:z.string().min(1),purchaseId:z.string().min(1),rating:ratingSchema,body:z.string().trim().min(20).max(1500),experiencedOn:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),evidenceKind:z.enum(["booking","receipt","checkin"]),evidence:z.string().trim().min(8).max(500)});
 export async function POST(request:Request){
   if(!sameOrigin(request))return NextResponse.json({error:"Nguồn yêu cầu không hợp lệ."},{status:403});
   const limited=rateLimit(request,"reviews",20);if(limited)return limited;
@@ -18,6 +18,8 @@ export async function POST(request:Request){
   const sql=await db();if(!sql)return NextResponse.json({error:"Đánh giá cần database lưu trữ."},{status:503});
   const found=await sql.execute({sql:"SELECT id FROM destinations WHERE id=?",args:[input.destinationId]});
   if(!found.rows.length)return NextResponse.json({error:"Địa điểm không tồn tại."},{status:404});
+  const purchased=await sql.execute({sql:"SELECT id FROM demo_purchases WHERE id=? AND user_id=? AND destination_id=?",args:[input.purchaseId,user.id,input.destinationId]});
+  if(!purchased.rows.length)return NextResponse.json({error:"Hãy hoàn tất thanh toán mô phỏng cho địa điểm này trước khi gửi đánh giá."},{status:403});
   let sealed;try{sealed=sealEvidence(input.evidence);}catch{return NextResponse.json({error:"Chưa cấu hình lưu bằng chứng riêng tư."},{status:503});}
   const existing=await sql.execute({sql:"SELECT review_id FROM review_claims WHERE user_id=? AND destination_id=?",args:[user.id,input.destinationId]});
   if(existing.rows.length)return NextResponse.json({error:"Bạn đã có một đánh giá tại địa điểm này; hãy sửa đánh giá hiện có."},{status:409});
@@ -29,6 +31,7 @@ export async function POST(request:Request){
     await transaction.execute({sql:"INSERT INTO review_claims(user_id,destination_id,review_id) VALUES(?,?,?)",args:[user.id,input.destinationId,id]});
     await transaction.execute({sql:`INSERT INTO review_details(review_id,user_id,rating_tenths,experienced_on,evidence_kind,evidence_ciphertext,evidence_hash,status,updated_at)
       VALUES(?,?,?,?,?,?,?,?,?)`,args:[id,user.id,ratingToTenths(input.rating),input.experiencedOn,input.evidenceKind,sealed.ciphertext,sealed.hash,"pending",now]});
+    await transaction.execute({sql:"INSERT INTO review_demo_purchases(review_id,purchase_id) VALUES(?,?)",args:[id,input.purchaseId]});
     await transaction.commit();return NextResponse.json({id,status:"pending"},{status:201});
   }catch{if(!transaction.closed)await transaction.rollback();return NextResponse.json({error:"Bằng chứng đã được sử dụng hoặc chưa thể lưu đánh giá."},{status:409});}
 }

@@ -4,7 +4,7 @@ const words = {
     explore:"Khám phá", trips:"Lịch trình", alerts:"Thông báo", profile:"Cá nhân",
     search:"Tìm địa điểm, trải nghiệm...", heroEyebrow:"KHÁM PHÁ HÀ NỘI THEO CÁCH CỦA BẠN",
     heroTitle:"Đi đúng để trải nghiệm thật.", heroBody:"Những hành trình ý nghĩa bắt đầu từ một nơi chốn phù hợp với bạn.",
-    create:"Tạo lịch trình với AI", featured:"Điểm đến nổi bật", seeAll:"Xem tất cả",
+    create:"Tạo lịch trình thông minh", featured:"Điểm đến nổi bật", seeAll:"Xem tất cả",
     discover:"Khám phá điểm đến", all:"Tất cả", add:"Thêm vào lịch trình",
     detail:"Xem chi tiết", demo:"DỮ LIỆU DEMO", noFresh:"Chưa có thông tin mới",
     status:"Trạng thái", estimated:"Tham khảo", saved:"Đã lưu",

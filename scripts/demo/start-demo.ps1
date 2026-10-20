@@ -16,7 +16,7 @@ if ($existing) {
     exit 0
   }
   & (Join-Path $PSScriptRoot 'stop-demo.ps1')
-  if ($LASTEXITCODE -ne 0) { throw 'Could not stop the stale managed demo.' }
+  if (Test-Path -LiteralPath $script:DemoStateFile) { throw 'Could not stop the stale managed demo.' }
 }
 if (Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue) {
   throw "Port $Port is already in use. No other process was stopped."

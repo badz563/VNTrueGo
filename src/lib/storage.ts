@@ -21,15 +21,17 @@ const alert = z.object({
   message:z.string(),createdAt:z.string(),decision:z.enum(["pending","accepted","dismissed","superseded"]),
   alternatives:z.array(z.string())
 });
-export type StoredData = { trips:Trip[]; activeId:string|null; alerts:Alert[]; lang:Language; preferences:string[] };
-export const emptyStored:StoredData={trips:[],activeId:null,alerts:[],lang:"vi",preferences:[]};
+export type StatusSimulation = { destinationId:string; revision:number };
+export type StoredData = { trips:Trip[]; activeId:string|null; alerts:Alert[]; lang:Language; preferences:string[]; simulations:StatusSimulation[] };
+export const emptyStored:StoredData={trips:[],activeId:null,alerts:[],lang:"vi",preferences:[],simulations:[]};
 export function parseStored(raw:string|null):StoredData {
   if(!raw)return emptyStored;
   try {
     const parsed=z.object({
       trips:z.array(trip).max(100),activeId:z.string().nullable(),
       alerts:z.array(alert).max(1000),lang:z.enum(["vi","en"]),
-      preferences:z.array(z.string()).max(12).default([])
+      preferences:z.array(z.string()).max(12).default([]),
+      simulations:z.array(z.object({destinationId:z.string(),revision:z.number().int().positive()})).max(30).default([])
     }).safeParse(JSON.parse(raw));
     return parsed.success?parsed.data:emptyStored;
   }catch{return emptyStored;}

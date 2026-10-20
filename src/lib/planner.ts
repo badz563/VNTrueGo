@@ -100,7 +100,8 @@ export function makeTrip(input: PlanInput, destinations: Destination[]): Trip {
         duration: chosen.d.duration, cost: chosen.d.price * input.people, locked: false,
         snapshotRev: chosen.d.statusRev,
         reason: input.interests.some(t => chosen.d.tags.includes(t))
-          ? "Phù hợp với sở thích và nhịp độ của bạn." : "Thuận đường và phù hợp ngân sách."
+          ? `Hợp sở thích ${input.interests.filter(t => chosen.d.tags.includes(t)).join(", ")}; phù hợp giờ mở cửa, nhịp độ và ngân sách.`
+          : "Thuận đường, phù hợp giờ mở cửa và ngân sách."
       });
       spent += chosen.d.price * input.people;
       used.add(chosen.d.id);
@@ -163,33 +164,38 @@ export function addActivity(trip: Trip, dayIndex: number, destination: Destinati
 }
 export function optimizeTrip(trip: Trip, destinations: Destination[]) {
   const lookup = new Map(destinations.map(d => [d.id, d]));
-  const days = trip.days.map(day => {
-    const activities = [...day.activities];
-    let previous: Destination | undefined;
-    for (let index = 0; index < activities.length; index++) {
-      if (activities[index].locked) { previous = lookup.get(activities[index].destinationId); continue; }
-      const candidates = activities.slice(index).filter(a => !a.locked);
-      if (!candidates.length) break;
-      candidates.sort((a, b) =>
-        travelMinutes(previous, lookup.get(a.destinationId)!, trip.input.transport) -
-        travelMinutes(previous, lookup.get(b.destinationId)!, trip.input.transport));
-      const best = candidates[0];
-      const bestIndex = activities.findIndex(a => a.id === best.id);
-      [activities[index], activities[bestIndex]] = [activities[bestIndex], activities[index]];
-      previous = lookup.get(activities[index].destinationId);
+  let best = recalculateTrip(trip,destinations);
+  const travel = (day:Trip["days"][number]) => day.activities.reduce((total,item)=>total+item.travelMinutes,0);
+  // Try swaps only when every resulting stop still fits its opening hours.
+  for (let dayIndex=0;dayIndex<best.days.length;dayIndex++) {
+    let improved=true;
+    while(improved){
+      improved=false;
+      const day=best.days[dayIndex];
+      for(let left=0;left<day.activities.length&&!improved;left++)for(let right=left+1;right<day.activities.length;right++){
+        if(day.activities[left].locked||day.activities[right].locked)continue;
+        const reordered=[...day.activities];[reordered[left],reordered[right]]=[reordered[right],reordered[left]];
+        const preview=recalculateTrip({...best,days:best.days.map((item,index)=>index===dayIndex?{...item,activities:reordered}:item)},destinations);
+        const candidate=preview.days[dayIndex];
+        const feasible=candidate.activities.every(activity=>{const destination=lookup.get(activity.destinationId);return !!destination&&destination.status!=="overloaded"&&
+          isOpenAt(destination,candidate.date,toMinutes(activity.start),activity.duration);});
+        if(feasible&&travel(candidate)<travel(day)){best=preview;improved=true;break;}
+      }
     }
-    return { ...day, activities };
-  });
-  return recalculateTrip({ ...trip, days }, destinations);
+  }
+  return best;
 }
 export function alternativesFor(destination: Destination, destinations: Destination[], trip?: Trip) {
   const used = new Set(trip?.days.flatMap(d => d.activities.map(a => a.destinationId)) || []);
+  const remaining = trip ? trip.input.budget - tripCost(trip) : Infinity;
+  const originalCost = trip?.days.flatMap(d => d.activities).find(a => a.destinationId === destination.id)?.cost || 0;
   return destinations.filter(d => d.id !== destination.id && !used.has(d.id) &&
-    d.status !== "closed" && d.status !== "overloaded" && d.category !== "Khách sạn")
+    d.status !== "closed" && d.status !== "overloaded" && d.category !== "Khách sạn" &&
+    (!trip || d.price * trip.input.people <= remaining + originalCost))
     .sort((a, b) =>
-      (Number(b.category === destination.category) * 10 - distanceKm(destination, b)) -
-      (Number(a.category === destination.category) * 10 - distanceKm(destination, a)))
-    .slice(0, 3);
+      (Number(b.category === destination.category) * 10 + (trip?.input.interests.filter(tag => b.tags.includes(tag)).length || 0) * 5 - distanceKm(destination, b)) -
+      (Number(a.category === destination.category) * 10 + (trip?.input.interests.filter(tag => a.tags.includes(tag)).length || 0) * 5 - distanceKm(destination, a)))
+    .slice(0, 8);
 }
 export type AlertAdjustment = "reschedule" | "move-earlier" | "move-later";
 function affectedDay(trip: Trip, activityId: string) {
@@ -258,7 +264,7 @@ export function detectAlerts(trip: Trip, destinations: Destination[], existing: 
           const preview = { ...trip, days: trip.days.map(item => ({ ...item, activities: item.activities.map(stop =>
             stop.id === activity.id ? { ...stop, destinationId: candidate.id } : stop) })) };
           return dayIsFeasible(recalculateTrip(preview, destinations), activity.id, destinations);
-        }).map(candidate => candidate.id)
+        }).slice(0,3).map(candidate => candidate.id)
     });
   }
   return alerts;

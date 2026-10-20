@@ -67,6 +67,7 @@ async function connect(): Promise<Client> {
   await client.executeMultiple(readFileSync(path.join(root, "migrations", "003_partner_content.sql"), "utf8"));
   await client.executeMultiple(readFileSync(path.join(root, "migrations", "004_saved_data.sql"), "utf8"));
   await client.executeMultiple(readFileSync(path.join(root, "migrations", "005_review_claims.sql"), "utf8"));
+  await client.executeMultiple(readFileSync(path.join(root, "migrations", "006_demo_purchases.sql"), "utf8"));
   // Add missing demo places without changing existing destinations or user data.
   await client.batch(seedStatements(), "write");
   return client;

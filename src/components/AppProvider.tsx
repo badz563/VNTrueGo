@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import type { Alert, Destination, Language, Trip } from "@/lib/types";
 import { addActivity, detectAlerts, resolveAlert, resolveAlertAdjustment, todayVietnam, type AlertAdjustment } from "@/lib/planner";
 import { emptyStored, importBackup, parseStored, type StoredData } from "@/lib/storage";
+import { applyStatusSimulations } from "@/lib/statusSimulation";
 type AppValue = {
   destinations: Destination[]; loading: boolean; error: string; checkedAt: string | null;
   trips: Trip[]; activeTrip: Trip | null; alerts: Alert[]; lang: Language; preferences: string[];
@@ -13,6 +14,7 @@ type AppValue = {
   acceptAlert: (id: string, replacementId: string) => string | null;
   acceptAdjustment: (id: string, adjustment: AlertAdjustment) => string | null;
   dismissAlert: (id: string) => void;
+  simulateClosure: () => string | null; resetSimulation: () => void;
   importTrips: (file: File) => Promise<number>;
 };
 const Context = createContext<AppValue | null>(null);
@@ -39,12 +41,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch("/api/destinations", { cache: "no-store" });
       if (!response.ok) throw new Error("Không tải được dữ liệu địa điểm.");
       const data = await response.json() as { destinations: Destination[]; checkedAt: string };
-      setDestinations(data.destinations);
+      const effective = applyStatusSimulations(data.destinations,storedRef.current.simulations);
+      setDestinations(effective);
       setCheckedAt(data.checkedAt);
       setError("");
       update(current => {
-        const additions = current.trips.flatMap(trip => detectAlerts(trip,data.destinations,current.alerts));
-        const lookup = new Map(data.destinations.map(destination => [destination.id,destination]));
+        const additions = current.trips.flatMap(trip => detectAlerts(trip,effective,current.alerts));
+        const lookup = new Map(effective.map(destination => [destination.id,destination]));
         const alerts = current.alerts.map(alert => {
           const activity = current.trips.flatMap(trip => trip.days.flatMap(day => day.activities))
             .find(item => item.id === alert.activityId);
@@ -136,6 +139,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const dismissAlert = useCallback((id: string) => update(current => ({
     ...current, alerts: current.alerts.map(a => a.id === id ? { ...a,decision:"dismissed" } : a)
   })),[update]);
+  const simulateClosure = useCallback(() => {
+    const current = storedRef.current;
+    const trip = current.trips.find(item => item.id === current.activeId) || current.trips[0];
+    if (!trip) return "Hãy tạo và lưu lịch trình trước khi thử cảnh báo.";
+    const simulated = new Set(current.simulations.map(item => item.destinationId));
+    const candidates = trip.days.flatMap(day => day.activities)
+      .map(activity => destinations.find(item => item.id === activity.destinationId))
+      .filter((item): item is Destination => !!item && item.status !== "closed" && !simulated.has(item.id));
+    if (!candidates.length) return "Không còn điểm đến phù hợp để mô phỏng. Bạn có thể đặt lại tình huống hoặc tạo lịch trình khác.";
+    const best = candidates.map(destination => {
+      const simulatedDestinations = applyStatusSimulations(destinations,[{destinationId:destination.id,revision:destination.statusRev+1}]);
+      return { destination, simulatedDestinations, alerts: detectAlerts(trip,simulatedDestinations,current.alerts) };
+    }).sort((a,b) => Number(b.alerts.some(alert => alert.alternatives.length > 0)) - Number(a.alerts.some(alert => alert.alternatives.length > 0)))[0];
+    const nextSimulations = [...current.simulations,{destinationId:best.destination.id,revision:best.destination.statusRev+1}];
+    const effective = applyStatusSimulations(destinations,nextSimulations);
+    update(previous => ({ ...previous, simulations:nextSimulations,
+      alerts:[...previous.trips.flatMap(item => detectAlerts(item,effective,previous.alerts)),...previous.alerts] }));
+    setDestinations(effective);
+    return null;
+  },[destinations,update]);
+  const resetSimulation = useCallback(() => {
+    const simulated = new Set(storedRef.current.simulations.map(item => item.destinationId));
+    update(current => ({ ...current,simulations:[],alerts:current.alerts.map(alert =>
+      simulated.has(alert.destinationId) && alert.decision === "pending" ? { ...alert,decision:"superseded" as const } : alert) }));
+    void refresh();
+  },[refresh,update]);
   const importTrips = useCallback(async (file: File) => {
     const trips = importBackup(await file.text());
     update(current => {
@@ -146,7 +175,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   },[update]);
   return <Context.Provider value={{ destinations,loading,error,checkedAt,trips:stored.trips,activeTrip,
     alerts:stored.alerts,lang:stored.lang,preferences:stored.preferences,setLang,setPreferences,refresh,saveTrip,deleteTrip,selectTrip,
-    addToTrip,acceptAlert,acceptAdjustment,dismissAlert,importTrips }}>{children}</Context.Provider>;
+    addToTrip,acceptAlert,acceptAdjustment,dismissAlert,simulateClosure,resetSimulation,importTrips }}>{children}</Context.Provider>;
 }
 export function useApp() {
   const value = useContext(Context);
