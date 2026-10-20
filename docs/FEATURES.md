@@ -4,6 +4,7 @@
 | --- | --- |
 | Khám phá 29 địa điểm Hà Nội gồm 5 quán ăn/cà phê/nhà hàng/khách sạn mới, tìm kiếm, loại hình, sở thích, lọc giá/sắp xếp rating đã duyệt, tải thêm, bản đồ MapLibre/OpenFreeMap | Hoạt động với dữ liệu minh họa; khách sạn không được tự xếp vào lịch trình tham quan |
 | Lập lịch trình cá nhân hóa theo quy tắc, mẫu sở thích, khóa/thay/sắp xếp, cảnh báo trạng thái, lưu localStorage | Hoạt động; chưa có định tuyến thực tế |
+| Đồng hành sau khi lập lịch: điểm sắp đến, chỉ đường Google Maps, đánh dấu đã ghé/bỏ qua, tiến độ theo ngày và tính lại giờ khi trễ | Hoạt động trên trình duyệt; giờ mới là ước tính, không tự đồng bộ lên tài khoản |
 | Google Maps URLs cho điểm và tuyến ngày; Google Translate Việt–Anh | Hoạt động bằng liên kết ngoài |
 | Đăng ký/đăng nhập/đăng xuất, đổi tên/mật khẩu, cookie phiên, scrypt | Hoạt động khi có database |
 | Yêu thích, sao lưu/mở lịch trình trên tài khoản | Hoạt động khi có database; sao lưu thủ công |

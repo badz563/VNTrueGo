@@ -1,5 +1,9 @@
 import type { Destination } from "./types";
 export function googleMapsPlaceUrl(place:Pick<Destination,"lat"|"lng">){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.lat},${place.lng}`)}`;}
+export function googleMapsNavigateUrl(place:Pick<Destination,"lat"|"lng">,transport:"walk"|"bike"|"car"="walk"){
+  const travelmode=transport==="car"?"driving":transport==="bike"?"bicycling":"walking";
+  return `https://www.google.com/maps/dir/?${new URLSearchParams({api:"1",destination:`${place.lat},${place.lng}`,travelmode}).toString()}`;
+}
 export function googleMapsDayRoutes(places:Pick<Destination,"lat"|"lng">[],transport:"walk"|"bike"|"car"="walk"){
   if(!places.length)return [];
   const mode=transport==="car"?"driving":transport==="bike"?"bicycling":"walking";

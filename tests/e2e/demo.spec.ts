@@ -1,4 +1,29 @@
 import { test, expect } from "@playwright/test";
+test("saved itinerary becomes a usable travel guide with persistent progress",async({page})=>{
+  await page.goto("/trip");
+  await page.getByRole("button",{name:"Tạo lịch trình thông minh"}).click();
+  await expect(page.getByText("Đã tạo và lưu lịch trình")).toBeVisible();
+  const guide=page.getByRole("region",{name:"Đồng hành chuyến đi"});
+  await expect(guide.getByText("Bản demo hiện dùng thuật toán cá nhân hóa; chưa có AI trực tuyến.")).toBeVisible();
+  await guide.getByRole("button",{name:"Bắt đầu dùng lịch trình"}).click();
+  await expect(guide.getByText(/0\/\d+ điểm đã ghé/)).toBeVisible();
+  const directions=guide.getByRole("link",{name:"Mở chỉ đường"});
+  await expect(directions).toHaveAttribute("href",/google\.com\/maps\/dir\/\?api=1&destination=/);
+  await guide.getByRole("button",{name:"Trễ +30 phút"}).click();
+  await expect(guide.getByText("trễ 30 phút")).toBeVisible();
+  await guide.getByRole("button",{name:"Đã ghé"}).click();
+  await expect(guide.getByText(/1\/\d+ điểm đã ghé/)).toBeVisible();
+  await expect(guide.getByRole("link",{name:"Đánh giá"})).toHaveAttribute("href",/\/destinations\/.*#reviews/);
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth)).toBeLessThanOrEqual(1);
+  await page.reload();
+  await expect(guide.getByText(/1\/\d+ điểm đã ghé/)).toBeVisible();
+  await expect(guide.getByText("trễ 30 phút")).toBeVisible();
+  await guide.getByRole("button",{name:"Bỏ qua"}).click();
+  await expect(guide.getByText("1 bỏ qua")).toBeVisible();
+  await guide.getByRole("button",{name:"Hoàn tác"}).last().click();
+  await expect(guide.getByText("0 bỏ qua")).toBeVisible();
+});
 test("personalized trip offers a private status simulation and applicable replacement",async({page,request})=>{
   await page.goto("/trip");
   await page.getByRole("button",{name:"Ẩm thực & cà phê"}).click();
@@ -7,6 +32,7 @@ test("personalized trip offers a private status simulation and applicable replac
   await expect(page.getByText("Đã tạo và lưu lịch trình")).toBeVisible();
   const initial=await page.evaluate(()=>JSON.parse(localStorage.getItem("truego:v1")||"{}").trips[0]);
   expect(initial.days.flatMap((day:{activities:{reason:string}[]})=>day.activities).some((activity:{reason:string})=>activity.reason.includes("ẩm thực"))).toBe(true);
+  await page.getByText("Thử tình huống điểm đến thay đổi").click();
   await page.getByRole("button",{name:"Mô phỏng điểm đóng cửa"}).click();
   await expect(page.getByText("Đã tạo tình huống mô phỏng")).toBeVisible();
   const simulation=await page.evaluate(()=>JSON.parse(localStorage.getItem("truego:v1")||"{}").simulations);
