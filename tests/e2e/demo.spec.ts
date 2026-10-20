@@ -4,7 +4,7 @@ test("saved itinerary becomes a usable travel guide with persistent progress",as
   await page.getByRole("button",{name:"Tạo lịch trình thông minh"}).click();
   await expect(page.getByText("Đã tạo và lưu lịch trình")).toBeVisible();
   const guide=page.getByRole("region",{name:"Đồng hành chuyến đi"});
-  await expect(guide.getByText("Bản demo hiện dùng thuật toán cá nhân hóa; chưa có AI trực tuyến.")).toBeVisible();
+  await expect(guide.getByText("Lịch trình được xếp bằng thuật toán cá nhân hóa; AI trực tuyến chưa được bật.")).toBeVisible();
   await guide.getByRole("button",{name:"Bắt đầu dùng lịch trình"}).click();
   await expect(guide.getByText(/0\/\d+ điểm đã ghé/)).toBeVisible();
   const directions=guide.getByRole("link",{name:"Mở chỉ đường"});
@@ -42,7 +42,7 @@ test("personalized trip offers a private status simulation and applicable replac
   await page.getByRole("link",{name:/Xem cảnh báo/}).click();
   await expect(page.getByText("Nguồn: mô phỏng trên thiết bị, không phải thực tế")).toBeVisible();
   await page.getByRole("button",{name:"Vì sao nên chọn điểm thay thế?"}).click();
-  await expect(page.getByText("Gợi ý theo thuật toán demo")).toBeVisible();
+  await expect(page.getByText("Gợi ý theo sở thích và lịch trình")).toBeVisible();
   await page.locator(".alternative-row button").first().click();
   await expect(page.getByText("Đã điều chỉnh")).toBeVisible();
 });

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   try {
     const parsed = schema.safeParse(await request.json());
     if (!parsed.success) return NextResponse.json({ error: "Vui lòng kiểm tra thông tin lịch trình.", issues: parsed.error.flatten() }, { status: 400 });
-    if (!/hà nội|ha noi|hanoi/i.test(parsed.data.region)) return NextResponse.json({ error: "Bản demo hiện hỗ trợ khu vực Hà Nội." }, { status: 400 });
+    if (!/hà nội|ha noi|hanoi/i.test(parsed.data.region)) return NextResponse.json({ error: "Hiện chỉ hỗ trợ lập lịch trình tại Hà Nội." }, { status: 400 });
     const destinations = await allDestinations();
     let trip = makeTrip(parsed.data, destinations);
     if (!trip.days.some(day => day.activities.length)) return NextResponse.json({ error: "Không tìm được địa điểm phù hợp với bộ lọc, giờ và ngân sách đã chọn." }, { status: 422 });

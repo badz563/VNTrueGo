@@ -9,6 +9,6 @@ export function photoAlt(destination: Destination, lang: Language): string {
     return lang === "vi" ? `Ảnh chụp ${name}` : `Photograph of ${name}`;
   }
   return lang === "vi"
-    ? `Ảnh chụp món ăn minh họa cho ${name}; không chụp tại cơ sở`
+    ? `Ảnh chụp món ăn; không chụp tại ${name}`
     : `Food photograph illustrating ${name}; not taken at this business`;
 }

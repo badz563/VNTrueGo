@@ -14,7 +14,7 @@ import "@fontsource/noto-serif/700.css";
 import "./globals.css";
 export const metadata:Metadata={
   title:{default:"VietNam TrueGo | Khám phá Hà Nội",template:"%s | VietNam TrueGo"},
-  description:"Khám phá điểm tham quan Hà Nội, tạo lịch trình cá nhân và nhận cảnh báo thay đổi trong bản demo TrueGo.",
+  description:"Khám phá điểm tham quan Hà Nội, tạo lịch trình cá nhân và theo dõi thay đổi điểm đến cùng TrueGo.",
   applicationName:"VietNam TrueGo",
   manifest:"/manifest.webmanifest",
   icons:{icon:"/brand-logo.png",apple:"/brand-logo.png"}

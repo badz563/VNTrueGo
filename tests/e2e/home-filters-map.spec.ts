@@ -11,7 +11,7 @@ test("home filters show matching places beside the controls on mobile",async({pa
   await expect(results.getByText("1 địa điểm phù hợp")).toBeVisible();
   await expect(results.locator(".destination-card")).toHaveCount(1);
   await expect(results.getByText("Pizza 4P’s Tràng Tiền")).toBeVisible();
-  await panel.getByLabel("Giá minh họa tối đa").selectOption("50000");
+  await panel.getByLabel("Chi phí tối đa").selectOption("50000");
   await expect(results.getByText("0 địa điểm phù hợp")).toBeVisible();
   await panel.getByRole("button",{name:"Xóa bộ lọc"}).click();
   await expect(results.getByText(/địa điểm phù hợp/)).not.toHaveText("0 địa điểm phù hợp");
@@ -19,7 +19,7 @@ test("home filters show matching places beside the controls on mobile",async({pa
   await expect(results.getByText("6 địa điểm phù hợp")).toBeVisible();
   await panel.getByRole("button",{name:"Khách sạn"}).click();
   await expect(results.getByText("2 địa điểm phù hợp")).toBeVisible();
-  await panel.getByLabel("Giá minh họa tối đa").selectOption("50000");
+  await panel.getByLabel("Chi phí tối đa").selectOption("50000");
   await expect(results.getByText("0 địa điểm phù hợp")).toBeVisible();
 });
 

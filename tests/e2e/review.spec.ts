@@ -13,8 +13,8 @@ test("rating stars and slider save a pending fractional review",async({page,requ
   const destination=(await (await request.get("/api/destinations/van-mieu-quoc-tu-giam")).json()).destination;
   const rejected=await page.request.post("/api/reviews",{headers:{Origin:"http://127.0.0.1:3101"},data:{destinationId:destination.id,purchaseId:"TG-DEMO-invalid",rating:4,body:"Đánh giá kiểm tra thiếu thanh toán mô phỏng.",experiencedOn:"2026-10-18",evidenceKind:"checkin",evidence:"demo-evidence"}});
   expect(rejected.status()).toBe(403);
-  await page.getByRole("button",{name:"Mô phỏng thanh toán"}).click();
-  await expect(page.getByText(/Biên nhận TG-DEMO-/)).toBeVisible();
+  await page.getByRole("button",{name:"Tạo biên nhận"}).click();
+  await expect(page.getByText(/Biên nhận TG-/)).toBeVisible();
   const purchase=(await (await page.request.get(`/api/demo/purchases?destinationId=${destination.id}`)).json()).purchase;
   expect(purchase.id).toMatch(/^TG-DEMO-/);
   const repeated=await page.request.post("/api/demo/purchases",{headers:{Origin:"http://127.0.0.1:3101"},data:{destinationId:destination.id}});

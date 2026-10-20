@@ -16,14 +16,13 @@ export default function DestinationCard({destination,compact=false,eager=false}:
   return <article className={compact?"destination-card compact":"destination-card"}>
     <Link href={`/destinations/${destination.slug}`} className="card-image-link" aria-label={`${t(lang,"detail")}: ${destination.name}`}>
       <Image src={destination.image} alt={photoAlt(destination, lang)} fill loading={eager?"eager":"lazy"} sizes="(max-width: 650px) 85vw, (max-width: 1100px) 45vw, 310px" className="card-image" />
-      <span className="image-label">{t(lang,"demo")}</span>
     </Link>
     <div className="card-content">
       <div className="card-topline"><span>{categoryText(lang,destination.category)}</span><span className={destination.status==="closed"&&recent?"status-chip closed":"status-chip"}>{recent?statusText(lang,destination.status):t(lang,"noFresh")}</span></div>
       <Link href={`/destinations/${destination.slug}`} className="card-title">{lang==="en"&&destination.nameEn?destination.nameEn:destination.name}</Link>
       <p className="card-location"><MapPin size={14}/>{destination.address}</p>
       {!!destination.ratingCount&&destination.rating!==null&&destination.rating!==undefined&&<p className="card-rating"><RatingDisplay value={destination.rating}/><strong>{destination.rating.toFixed(2)}</strong><small>({destination.ratingCount})</small></p>}
-      <div className="card-footer"><span>{destination.category==="Khách sạn"?(lang==="vi"?"Giá phòng: xem nguồn chính thức":"Room rate: see official site"):destination.price===0?(lang==="vi"?"Giá minh họa: 0 ₫":"Demo price: 0 ₫"):`${t(lang,"estimated")} · ${destination.price.toLocaleString("vi-VN")} ₫`}</span>
+      <div className="card-footer"><span>{destination.category==="Khách sạn"?(lang==="vi"?"Giá phòng thay đổi theo ngày · xem chi tiết":"Room rates vary by date · view details"):destination.price===0?(lang==="vi"?"Vào cửa miễn phí":"Free entry"):`${t(lang,"estimated")} · ${destination.price.toLocaleString("vi-VN")} ₫`}</span>
         <div><Link className="card-arrow" href={`/destinations/${destination.slug}`} aria-label={t(lang,"detail")}><ArrowUpRight size={18}/></Link>
         {destination.category!=="Khách sạn"&&<button className="card-plus" disabled={destination.status==="closed"||destination.status==="overloaded"} onClick={add} aria-label={destination.status==="closed"||destination.status==="overloaded"?(lang==="vi"?"Hiện không thể thêm":"Currently unavailable"):addResult==="exists"?(lang==="vi"?"Đã có trong lịch trình":"Already in itinerary"):addResult==="added"?(lang==="vi"?"Đã thêm":"Added"):`${t(lang,"add")} ${destination.name}`}>{addResult?<Check size={18}/>:<Plus size={18}/>}</button>}</div>
       </div>

@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Địa điểm không hợp lệ." }, { status: 400 });
   const sql = await db();
-  if (!sql) return NextResponse.json({ error: "Chức năng demo cần database lưu trữ." }, { status: 503 });
+  if (!sql) return NextResponse.json({ error: "Chưa có nơi lưu biên nhận." }, { status: 503 });
   const found = await sql.execute({ sql: "SELECT id,price FROM destinations WHERE id=?", args: [parsed.data.destinationId] });
   if (!found.rows.length) return NextResponse.json({ error: "Địa điểm không tồn tại." }, { status: 404 });
   const id = `TG-DEMO-${randomUUID()}`;

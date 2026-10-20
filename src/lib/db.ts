@@ -22,8 +22,8 @@ function photoCredit(id: string) {
 function seedDetails(row: SeedRow) {
   const extra = row as SeedRow & { description?: string; descriptionEn?: string; sourceUrl?: string };
   return {
-    description: extra.description || `Điểm tham quan tại ${row.address}. Nội dung giới thiệu và thông tin vận hành trong bản demo chỉ để lập kế hoạch tham khảo.`,
-    descriptionEn: extra.descriptionEn || `An attraction in ${row.address}. Descriptions and operating details in this demo are illustrative only.`,
+    description: extra.description || `Điểm tham quan tại ${row.address}. Kiểm tra giờ mở cửa và giá hiện hành trước khi đi.`,
+    descriptionEn: extra.descriptionEn || `An attraction at ${row.address}. Check current opening hours and prices before visiting.`,
     sourceUrl: extra.sourceUrl
   };
 }
@@ -98,11 +98,16 @@ export function mapDestination(row: Row): Destination {
   const id = String(row.id);
   const seeded = seedById.get(id);
   const storedImage = String(row.image);
+  // Keep existing databases intact while refreshing only the original seed copy.
+  const storedDescription = String(row.description);
+  const storedDescriptionEn = row.description_en ? String(row.description_en) : null;
+  const legacyVi = /trong bản demo chỉ để lập kế hoạch tham khảo\.|Bản demo chưa có giá phòng|Nội dung giới thiệu và thông tin vận hành trong bản demo/.test(storedDescription);
+  const legacyEn = storedDescriptionEn && /illustrative planning data\.|This demo has no room rates|Descriptions and operating details in this demo/.test(storedDescriptionEn);
   return {
     id, slug: String(row.slug), name: String(row.name),
     nameEn: row.name_en ? String(row.name_en) : null,
-    category: String(row.category), description: String(row.description),
-    descriptionEn: row.description_en ? String(row.description_en) : null,
+    category: String(row.category), description: seeded && legacyVi ? seedDetails(seeded).description : storedDescription,
+    descriptionEn: seeded && legacyEn ? seedDetails(seeded).descriptionEn : storedDescriptionEn,
     lat: Number(row.lat), lng: Number(row.lng), address: String(row.address),
     image: seeded && oldDemoImages.has(storedImage) ? seeded.image : storedImage,
     photoCredit: seeded && (oldDemoImages.has(storedImage) || storedImage === seeded.image) ? photoCredit(id) : undefined,
